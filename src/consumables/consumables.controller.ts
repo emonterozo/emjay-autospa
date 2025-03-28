@@ -8,12 +8,15 @@ import {
   UsePipes,
   ValidationPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ConsumablesService } from './consumables.service';
 import { CreateConsumableDto } from './dto/create-consumable.dto';
 import { ObjectIdDto } from '../common/dto/object-id.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { AuthGuard } from '../common/guards/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('consumables')
 export class ConsumablesController {
   constructor(private readonly consumablesService: ConsumablesService) {}

@@ -9,6 +9,7 @@ import {
   ValidationPipe,
   UsePipes,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { CustomersService } from './customers.service';
@@ -17,17 +18,20 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { ObjectIdDto } from '../common/dto/object-id.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { OtpDto } from './dto/otp.dto';
+import { AuthGuard } from '../common/guards/auth.guard';
 
 @Controller('customers')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Get(':customer_id/free-wash-points')
+  @UseGuards(AuthGuard)
   getFreeWashPoints(@Param() params: ObjectIdDto) {
     return this.customersService.getFreeWashPoints(params.customer_id);
   }
 
   @Get(':customer_id/wash-points')
+  @UseGuards(AuthGuard)
   getWashPoints(@Param() params: ObjectIdDto) {
     return this.customersService.getWashPoints(params.customer_id);
   }
@@ -73,6 +77,7 @@ export class CustomersController {
   }
 
   @Get()
+  @UseGuards(AuthGuard)
   findAll(
     @Query(new ValidationPipe({ transform: true }))
     paginationDto: PaginationDto,
@@ -81,11 +86,13 @@ export class CustomersController {
   }
 
   @Get(':customer_id')
+  @UseGuards(AuthGuard)
   findOne(@Param() params: ObjectIdDto) {
     return this.customersService.findOne(params.customer_id);
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard)
   update(
     @Param('id') id: string,
     @Body() updateCustomerDto: UpdateCustomerDto,

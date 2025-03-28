@@ -8,6 +8,7 @@ import {
   ValidationPipe,
   Get,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -20,7 +21,9 @@ import { GetCompletedTransactionDto } from './dto/get-completed-transaction.dto'
 import { GetTransactionDetailsDto } from './dto/get-transaction-details.dto';
 import { GetWeekSalesDto } from './dto/get-week-sales.dto';
 import { GetTransactionStatisticsDto } from './dto/get-transaction-statistics.dto';
+import { AuthGuard } from '../common/guards/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}

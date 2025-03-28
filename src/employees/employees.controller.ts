@@ -8,13 +8,16 @@ import {
   UsePipes,
   ValidationPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ObjectIdDto } from '../common/dto/object-id.dto';
+import { AuthGuard } from '../common/guards/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('employees')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
