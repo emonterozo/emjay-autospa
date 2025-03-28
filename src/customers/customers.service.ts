@@ -26,6 +26,7 @@ import { sendSMS } from '../common/utils/sendSMS';
 import { Otp } from './schemas/otp.schema';
 import { jwtSign } from '../common/utils/jwtSign';
 import { OtpDto } from './dto/otp.dto';
+import { PromosService } from 'src/promos/promos.service';
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000);
@@ -61,6 +62,7 @@ export class CustomersService {
     @InjectModel(Otp.name) private readonly otpModel: Model<Otp>,
     private readonly transactionService: TransactionsService,
     private readonly configService: ConfigService,
+    private readonly promoService: PromosService,
   ) {}
   async getFreeWashPoints(id: ObjectIdDto['customer_id']) {
     const customer = await this.customerModel.findById(id);
@@ -110,8 +112,9 @@ export class CustomersService {
     });
   }
 
-  async getWashPoints(id: ObjectIdDto['customer_id']) {
+  async getWashPointsPromos(id: ObjectIdDto['customer_id']) {
     const customer = await this.customerModel.findById(id);
+    const result = await this.promoService.findAll(true);
 
     if (!customer)
       throw new NotFoundException(
@@ -127,6 +130,7 @@ export class CustomersService {
         moto_wash_service_count: customer.moto_wash_service_count,
         car_wash_service_count: customer.car_wash_service_count,
       },
+      promos: result?.data.promos ?? [],
     });
   }
 

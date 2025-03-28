@@ -29,6 +29,7 @@ import {
   ServiceCharge,
   StatisticsFilter,
   TransactionStatus,
+  VehicleSize,
   VehicleType,
 } from '../common/enum';
 import { SuccessResponse } from '../common/dto/success-response.dto';
@@ -43,6 +44,14 @@ import { GetWeekSalesDto } from './dto/get-week-sales.dto';
 import { getDateRange } from '../common/utils/date-utils';
 import { GetTransactionStatisticsDto } from './dto/get-transaction-statistics.dto';
 import { Expense } from '../expenses/schema/expense.schema';
+
+const SIZE_DESCRIPTION: Record<VehicleSize, string> = {
+  sm: 'Small',
+  md: 'Medium',
+  lg: 'Large',
+  xl: 'Extra Large',
+  xxl: 'Extra Extra Large',
+};
 
 type AvailedServiceWithId = AvailedService & {
   _id: Types.ObjectId;
@@ -161,6 +170,42 @@ export class TransactionsService {
     } catch {
       throwInternalServerError();
     }
+  }
+
+  async getTransactionsQueue() {
+    const transactions = await this.transactionModel
+      .find({ status: TransactionStatus.ONGOING })
+      .populate<{ availed_services: AvailedServiceWithPopulatedService[] }>({
+        path: 'availed_services.service_id',
+        select: 'title',
+      });
+
+    const formattedTransaction: any[] = [];
+
+    transactions.forEach((transaction) => {
+      transaction.availed_services
+        .filter((service) =>
+          [AvailedServiceStatus.PENDING, AvailedServiceStatus.ONGOING].includes(
+            service.status,
+          ),
+        )
+        .forEach((service) => {
+          const { title } = service.service_id;
+
+          formattedTransaction.push({
+            _id: service._id.toString(),
+            service_name: title,
+            status: service.status,
+            date: transaction.check_in,
+            description: `${transaction.vehicle_type.charAt(0).toUpperCase()}${transaction.vehicle_type.slice(1)} ${SIZE_DESCRIPTION[transaction.vehicle_size]}`,
+          });
+        });
+    });
+
+    return new SuccessResponse({
+      transactions: formattedTransaction,
+      queue: transactions.length,
+    });
   }
 
   async getWeekSales(getWeekSalesDto: GetWeekSalesDto) {
@@ -931,7 +976,13 @@ export class TransactionsService {
               { _id: transaction_id },
               {
                 availed_services: {
-                  $elemMatch: { status: AvailedServiceStatus.DONE },
+                  $filter: {
+                    input: '$availed_services',
+                    as: 'service',
+                    cond: {
+                      $eq: ['$$service.status', AvailedServiceStatus.DONE],
+                    },
+                  },
                 },
               },
             );
@@ -1031,12 +1082,6 @@ export class TransactionsService {
                     ? { size: item.size, count: customerWashCount }
                     : item,
                 );
-
-              console.log(
-                transaction.vehicle_type === VehicleType.CAR
-                  ? updateWashCount(customer?.car_wash_service_count || [])
-                  : customer?.car_wash_service_count,
-              );
 
               await this.customerModel.findByIdAndUpdate(
                 transaction.customer_id,
@@ -1344,6 +1389,7 @@ export class TransactionsService {
     );
   }
 
+  //note almost same to getCompletedTransactions. Should only have a capability to not run aggregation
   async getRecentTransactions(
     type: 'customer' | 'employee',
     id: Types.ObjectId,

@@ -30,10 +30,10 @@ export class CustomersController {
     return this.customersService.getFreeWashPoints(params.customer_id);
   }
 
-  @Get(':customer_id/wash-points')
+  @Get(':customer_id/wash-points-promos')
   @UseGuards(AuthGuard)
-  getWashPoints(@Param() params: ObjectIdDto) {
-    return this.customersService.getWashPoints(params.customer_id);
+  getWashPointsPromos(@Param() params: ObjectIdDto) {
+    return this.customersService.getWashPointsPromos(params.customer_id);
   }
 
   @Post()

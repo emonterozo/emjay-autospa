@@ -33,6 +33,11 @@ export class TransactionsController {
     return this.transactionsService.getTransactions(getTransactionDto);
   }
 
+  @Get('/queue')
+  getTransactionsQueue() {
+    return this.transactionsService.getTransactionsQueue();
+  }
+
   @Get('/week-sales')
   getWeekSales(@Query() getWeekSalesDto: GetWeekSalesDto) {
     return this.transactionsService.getWeekSales(getWeekSalesDto);
@@ -88,7 +93,7 @@ export class TransactionsController {
     );
   }
 
-  @Patch(':transaction_id/availed_services')
+  @Patch(':transaction_id/availed-services')
   @UsePipes(new ValidationPipe({ transform: true }))
   createAvailedService(
     @Param() params: ObjectIdDto,
@@ -100,7 +105,7 @@ export class TransactionsController {
     );
   }
 
-  @Get(':transaction_id/availed_services/:availed_service_id')
+  @Get(':transaction_id/availed-services/:availed_service_id')
   getTransactionAvailedService(@Param() params: ObjectIdDto) {
     return this.transactionsService.getTransactionAvailedService(
       params.transaction_id,
@@ -108,7 +113,7 @@ export class TransactionsController {
     );
   }
 
-  @Patch(':transaction_id/availed_services/:availed_service_id')
+  @Patch(':transaction_id/availed-services/:availed_service_id')
   @UsePipes(new ValidationPipe({ transform: true }))
   updateAvailedService(
     @Param() params: ObjectIdDto,

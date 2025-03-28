@@ -5,6 +5,7 @@ import { CustomersController } from './customers.controller';
 import { Customer, CustomerSchema } from './schemas/customer.schema';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { Otp, OtpSchema } from './schemas/otp.schema';
+import { PromosModule } from '../promos/promos.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { Otp, OtpSchema } from './schemas/otp.schema';
       { name: Otp.name, schema: OtpSchema },
     ]),
     TransactionsModule,
+    PromosModule,
   ],
   controllers: [CustomersController],
   providers: [CustomersService],
