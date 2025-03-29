@@ -1063,13 +1063,15 @@ export class TransactionsService {
                     service.service,
                   )
                 ) {
-                  customerWashCount = Math.max(
-                    0,
-                    customerWashCount +
-                      (service.is_free && service.service === 'Moto Wash'
-                        ? -10
-                        : 1),
-                  );
+                  if (service.is_free) {
+                    customerWashCount = Math.max(
+                      0,
+                      customerWashCount +
+                        (service.service === 'Moto Wash' ? -10 : 0),
+                    );
+                  } else {
+                    customerWashCount = customerWashCount + 1;
+                  }
                 }
               });
 
