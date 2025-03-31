@@ -9,7 +9,7 @@ type Account = {
   type: string;
 };
 
-type Customer = {
+export type Customer = {
   _id: string;
   username: string;
   first_name: string;
@@ -35,7 +35,7 @@ export const jwtSign = (
   }
 
   const accessToken: string = jwt.sign({ user }, tokenSecret, {
-    expiresIn: '1h',
+    expiresIn: '1m',
   });
 
   const refreshToken = jwt.sign({ user }, refreshTokenSecret, {

@@ -63,3 +63,7 @@ export enum MessageType {
   VERIFICATION = 'VERIFICATION',
   FORGOT = 'FORGOT',
 }
+export enum APP {
+  EMJAY_REWARDS = 'EMJAY_REWARDS',
+  EMJAY_ADMIN = 'EMJAY_ADMIN',
+}

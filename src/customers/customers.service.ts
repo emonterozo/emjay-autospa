@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
+import * as jwt from 'jsonwebtoken';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { ObjectIdDto } from '../common/dto/object-id.dto';
@@ -26,7 +27,8 @@ import { sendSMS } from '../common/utils/sendSMS';
 import { Otp } from './schemas/otp.schema';
 import { jwtSign } from '../common/utils/jwtSign';
 import { OtpDto } from './dto/otp.dto';
-import { PromosService } from 'src/promos/promos.service';
+import { PromosService } from '../promos/promos.service';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000);
@@ -54,6 +56,18 @@ const sizes = [
     count: 0,
   },
 ];
+
+export type DecodedToken = {
+  user: {
+    _id: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+    gender: string;
+  };
+  iat: number;
+  exp: number;
+};
 
 @Injectable()
 export class CustomersService {
@@ -188,6 +202,35 @@ export class CustomersService {
       }
     } else {
       throwInternalServerError();
+    }
+  }
+
+  refreshToken(refreshTokenDto: RefreshTokenDto) {
+    try {
+      const refreshTokenSecret: string = this.configService.get<string>(
+        'REFRESH_TOKEN_SECRET',
+      )!;
+
+      const decoded = jwt.verify(
+        refreshTokenDto.refresh_token,
+        refreshTokenSecret,
+      ) as DecodedToken;
+
+      const { accessToken, refreshToken } = jwtSign(
+        decoded.user,
+        this.configService,
+      );
+
+      return new SuccessResponse({ accessToken, refreshToken });
+    } catch {
+      throw new UnauthorizedException(
+        new ErrorResponse(403, [
+          {
+            field: 'refresh_token',
+            message: 'Invalid or expired refresh token',
+          },
+        ]),
+      );
     }
   }
 

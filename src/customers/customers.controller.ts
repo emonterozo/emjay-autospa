@@ -19,6 +19,7 @@ import { ObjectIdDto } from '../common/dto/object-id.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { OtpDto } from './dto/otp.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('customers')
 export class CustomersController {
@@ -40,6 +41,12 @@ export class CustomersController {
   @UsePipes(new ValidationPipe({ transform: true }))
   create(@Body() createCustomerDto: CreateCustomerDto) {
     return this.customersService.create(createCustomerDto);
+  }
+
+  @Post('/refresh/token')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.customersService.refreshToken(refreshTokenDto);
   }
 
   @Post('/login')
