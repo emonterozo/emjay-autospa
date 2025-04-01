@@ -26,6 +26,10 @@ export class CreateCustomerDto {
   password: string;
 
   @IsOptional()
+  @IsString()
+  current_password?: string;
+
+  @IsOptional()
   province?: string;
 
   @IsOptional()

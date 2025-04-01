@@ -98,12 +98,12 @@ export class CustomersController {
     return this.customersService.findOne(params.customer_id);
   }
 
-  @Patch(':id')
+  @Patch(':customer_id')
   @UseGuards(AuthGuard)
   update(
-    @Param('id') id: string,
+    @Param() params: ObjectIdDto,
     @Body() updateCustomerDto: UpdateCustomerDto,
   ) {
-    return this.customersService.update(+id, updateCustomerDto);
+    return this.customersService.update(params.customer_id, updateCustomerDto);
   }
 }

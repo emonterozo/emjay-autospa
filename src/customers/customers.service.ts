@@ -257,6 +257,7 @@ export class CustomersService {
         first_name: customer.first_name,
         last_name: customer.last_name,
         gender: customer.gender,
+        birth_date: customer.birth_date,
       };
 
       const { accessToken, refreshToken } = jwtSign(
@@ -364,6 +365,7 @@ export class CustomersService {
       first_name: updatedCustomer?.first_name ?? '',
       last_name: updatedCustomer?.last_name ?? '',
       gender: updatedCustomer?.gender ?? '',
+      birth_date: updatedCustomer?.birth_date,
     };
 
     const { accessToken, refreshToken } = jwtSign(userData, this.configService);
@@ -441,6 +443,7 @@ export class CustomersService {
       first_name: updatedCustomer?.first_name ?? '',
       last_name: updatedCustomer?.last_name ?? '',
       gender: updatedCustomer?.gender ?? '',
+      birth_date: updatedCustomer?.birth_date ?? '',
     };
 
     const { accessToken, refreshToken } = jwtSign(userData, this.configService);
@@ -488,7 +491,70 @@ export class CustomersService {
     });
   }
 
-  update(id: number, updateCustomerDto: UpdateCustomerDto) {
-    return `This action updates a #${id} customer`;
+  async update(
+    id: ObjectIdDto['customer_id'],
+    updateCustomerDto: UpdateCustomerDto,
+  ) {
+    if (updateCustomerDto.password && updateCustomerDto.current_password) {
+      const customer = await this.customerModel.findById(id);
+
+      if (!customer)
+        return throwNotFoundException('customer_id', 'Customer does not exist');
+
+      if (
+        !(await bcrypt.compare(
+          updateCustomerDto.current_password,
+          customer?.password,
+        ))
+      ) {
+        throw new BadRequestException(
+          new ErrorResponse(400, [
+            {
+              field: 'current_password',
+              message: 'Current password is incorrect',
+            },
+          ]),
+        );
+      }
+
+      const saltRounds =
+        parseInt(this.configService.get<string>('SALT_ROUND')!, 10) || 10;
+      const hashedPassword = await bcrypt.hash(
+        updateCustomerDto.password,
+        saltRounds,
+      );
+
+      const updateCustomer = await this.customerModel.findByIdAndUpdate(id, {
+        password: hashedPassword,
+      });
+
+      return new SuccessResponse({
+        user: {
+          _id: id,
+          first_name: updateCustomer?.first_name,
+          last_name: updateCustomer?.last_name,
+        },
+      });
+    }
+
+    const updateCustomer = await this.customerModel.findByIdAndUpdate(
+      id,
+      {
+        first_name: updateCustomerDto.first_name,
+        last_name: updateCustomerDto.last_name,
+      },
+      { returnDocument: 'after' },
+    );
+
+    if (!updateCustomer)
+      return throwNotFoundException('customer_id', 'Customer does not exist');
+
+    return new SuccessResponse({
+      user: {
+        _id: id,
+        first_name: updateCustomer.first_name,
+        last_name: updateCustomer.last_name,
+      },
+    });
   }
 }
