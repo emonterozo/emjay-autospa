@@ -35,7 +35,7 @@ export const jwtSign = (
   }
 
   const accessToken: string = jwt.sign({ user }, tokenSecret, {
-    expiresIn: '1m',
+    expiresIn: '1h',
   });
 
   const refreshToken = jwt.sign({ user }, refreshTokenSecret, {
