@@ -50,7 +50,6 @@ const SIZE_DESCRIPTION: Record<VehicleSize, string> = {
   md: 'Medium',
   lg: 'Large',
   xl: 'Extra Large',
-  xxl: 'Extra Extra Large',
 };
 
 type AvailedServiceWithId = AvailedService & {

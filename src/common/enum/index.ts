@@ -8,7 +8,6 @@ export enum VehicleSize {
   MD = 'md',
   LG = 'lg',
   XL = 'xl',
-  XXL = 'xxl',
 }
 
 export enum Gender {

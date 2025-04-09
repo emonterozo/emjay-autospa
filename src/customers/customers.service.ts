@@ -51,10 +51,6 @@ const sizes = [
     size: 'xl',
     count: 0,
   },
-  {
-    size: 'xxl',
-    count: 0,
-  },
 ];
 
 export type DecodedToken = {
