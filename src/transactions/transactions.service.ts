@@ -863,6 +863,7 @@ export class TransactionsService {
         vehicle_size: transaction.vehicle_size,
         model: transaction.model,
         plate_number: transaction.plate_number,
+        status: transaction.status,
         availed_services,
       },
     });
