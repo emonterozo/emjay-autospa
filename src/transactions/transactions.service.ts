@@ -1014,6 +1014,7 @@ export class TransactionsService {
                     points: price?.points ?? 0,
                     earning_points: price?.earning_points ?? 0,
                     is_free: availedService.is_free,
+                    has_wash_count: service.has_wash_count,
                   };
                 }),
               );
@@ -1050,27 +1051,11 @@ export class TransactionsService {
 
               // Update wash count logic (Prevent negative wash count)
               sortedServices.forEach((service) => {
-                const isCar = transaction.vehicle_type === VehicleType.CAR;
-                if (isCar && service.service === 'Car Wash') {
+                if (service.has_wash_count) {
                   customerWashCount = Math.max(
                     0,
                     customerWashCount + (service.is_free ? -10 : 1),
                   );
-                } else if (
-                  !isCar &&
-                  ['Moto Wash', 'Hand Wax', 'Buff Wax'].includes(
-                    service.service,
-                  )
-                ) {
-                  if (service.is_free) {
-                    customerWashCount = Math.max(
-                      0,
-                      customerWashCount +
-                        (service.service === 'Moto Wash' ? -10 : 0),
-                    );
-                  } else {
-                    customerWashCount = customerWashCount + 1;
-                  }
                 }
               });
 
@@ -1105,7 +1090,9 @@ export class TransactionsService {
             status: TransactionStatus.COMPLETED,
             check_out: new Date(),
           });
-          return new SuccessResponse({ transaction: { _id: transaction._id } });
+          return new SuccessResponse({
+            transaction: { _id: transaction._id },
+          });
         }
       } else {
         throw new NotFoundException(

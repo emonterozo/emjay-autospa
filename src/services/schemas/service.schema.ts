@@ -47,6 +47,9 @@ export class Service {
 
   @Prop()
   last_review?: Date;
+
+  @Prop({ required: true })
+  has_wash_count: boolean;
 }
 
 export const ServiceSchema = SchemaFactory.createForClass(Service);
