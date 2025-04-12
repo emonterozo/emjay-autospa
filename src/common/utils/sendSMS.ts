@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { MessageType } from '../enum';
@@ -17,11 +14,11 @@ export async function sendSMS(
 
   const message =
     type === MessageType.VERIFICATION
-      ? 'Thank you for registering! Your EmJay AutoSpa & Detailing verification code is:'
-      : 'Your EmJay AutoSpa & Detailing password reset verification code is:';
+      ? 'Thank you for registering! Your Emjay AutoSpa & Detailing verification code is:'
+      : 'Your Emjay AutoSpa & Detailing password reset verification code is:';
 
   try {
-    const response = await axios.post(
+    await axios.post(
       url,
       {
         message: `${message} ${otp}`,
@@ -38,7 +35,6 @@ export async function sendSMS(
       },
     );
 
-    console.log(response);
     return { success: true };
   } catch {
     return { success: false };

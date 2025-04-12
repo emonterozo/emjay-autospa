@@ -10,6 +10,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { PromosModule } from './promos/promos.module';
 import { VersionModule } from './version/version.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { VersionModule } from './version/version.module';
     AccountsModule,
     PromosModule,
     VersionModule,
+    FirebaseModule,
   ],
 })
 export class AppModule {}

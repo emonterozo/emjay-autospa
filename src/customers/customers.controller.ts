@@ -52,7 +52,11 @@ export class CustomersController {
   @Post('/login')
   @UsePipes(new ValidationPipe({ transform: true }))
   async login(
-    @Body() loginDto: Pick<CreateCustomerDto, 'contact_number' | 'password'>,
+    @Body()
+    loginDto: Pick<
+      CreateCustomerDto,
+      'contact_number' | 'password' | 'fcm_token'
+    >,
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.customersService.login(loginDto);

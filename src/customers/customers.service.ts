@@ -231,7 +231,10 @@ export class CustomersService {
   }
 
   async login(
-    loginDto: Pick<CreateCustomerDto, 'contact_number' | 'password'>,
+    loginDto: Pick<
+      CreateCustomerDto,
+      'contact_number' | 'password' | 'fcm_token'
+    >,
   ) {
     const { contact_number, password } = loginDto;
     const customer = await this.customerModel.findOne({ contact_number });
@@ -245,6 +248,10 @@ export class CustomersService {
           },
         ]),
       );
+
+    await this.customerModel.findByIdAndUpdate(customer._id, {
+      $set: { fcm_token: loginDto.fcm_token },
+    });
 
     if (customer.is_verified) {
       const userData = {

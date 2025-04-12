@@ -25,6 +25,9 @@ export class CreateCustomerDto {
   @IsString()
   password: string;
 
+  @IsString()
+  fcm_token: string;
+
   @IsOptional()
   @IsString()
   current_password?: string;

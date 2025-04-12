@@ -57,6 +57,9 @@ export class Customer {
   @Prop({ required: true, min: 0 })
   points: number;
 
+  @Prop({ required: true })
+  fcm_token: string;
+
   @Prop({ type: [WashServiceCountSchema], required: true })
   car_wash_service_count: WashServiceCount[];
 

@@ -51,8 +51,7 @@ export class EmployeesService {
       const totalCount = await this.employeeModel.countDocuments();
 
       return new SuccessResponse({ employees, totalCount });
-    } catch (err) {
-      console.log(err);
+    } catch {
       throwInternalServerError();
     }
   }
