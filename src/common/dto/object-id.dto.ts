@@ -21,4 +21,8 @@ export class ObjectIdDto {
   @IsOptional()
   @IsMongoId()
   availed_service_id?: Types.ObjectId;
+
+  @IsOptional()
+  @IsMongoId()
+  promo_id?: Types.ObjectId;
 }

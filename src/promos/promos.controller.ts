@@ -14,6 +14,7 @@ import { PromosService } from './promos.service';
 import { CreatePromoDto } from './dto/create-promo.dto';
 import { UpdatePromoDto } from './dto/update-promo.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
+import { ObjectIdDto } from '../common/dto/object-id.dto';
 
 @UseGuards(AuthGuard)
 @Controller('promos')
@@ -36,9 +37,10 @@ export class PromosController {
     return this.promosService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePromoDto: UpdatePromoDto) {
-    return this.promosService.update(+id, updatePromoDto);
+  @Patch(':promo_id')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  update(@Param() params: ObjectIdDto, @Body() updatePromoDto: UpdatePromoDto) {
+    return this.promosService.update(params.promo_id, updatePromoDto);
   }
 
   @Delete(':id')

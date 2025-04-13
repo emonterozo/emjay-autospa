@@ -40,10 +40,16 @@ export class FirebaseService {
     if (type === 'multiple') {
       const message: admin.messaging.MulticastMessage = {
         tokens: params.deviceTokens,
-        data: {
-          ...data,
+        notification: {
           title,
           body,
+        },
+        data,
+        android: {
+          priority: 'high',
+          notification: {
+            icon: 'ic_notification',
+          },
         },
       };
 
@@ -58,10 +64,16 @@ export class FirebaseService {
     } else {
       const message: admin.messaging.Message = {
         token: params.deviceToken,
-        data: {
-          ...data,
+        notification: {
           title,
           body,
+        },
+        data,
+        android: {
+          priority: 'high',
+          notification: {
+            icon: 'ic_notification',
+          },
         },
       };
 

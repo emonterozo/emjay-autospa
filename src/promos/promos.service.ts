@@ -5,10 +5,14 @@ import { Model } from 'mongoose';
 import { CreatePromoDto } from './dto/create-promo.dto';
 import { UpdatePromoDto } from './dto/update-promo.dto';
 import { Promo } from './schemas/promo.schema';
-import { throwInternalServerError } from '../common/utils/error-utils';
+import {
+  throwInternalServerError,
+  throwNotFoundException,
+} from '../common/utils/error-utils';
 import { SuccessResponse } from '../common/dto/success-response.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Customer } from '../customers/schemas/customer.schema';
+import { ObjectIdDto } from '../common/dto/object-id.dto';
 
 @Injectable()
 export class PromosService {
@@ -44,7 +48,7 @@ export class PromosService {
         });
       }
 
-      return new SuccessResponse({ expense: { _id: savedPromo._id } });
+      return new SuccessResponse({ promo: { _id: savedPromo._id } });
     } catch {
       throwInternalServerError();
     }
@@ -70,8 +74,38 @@ export class PromosService {
     return `This action returns a #${id} promo`;
   }
 
-  update(id: number, updatePromoDto: UpdatePromoDto) {
-    return `This action updates a #${id} promo`;
+  async update(id: ObjectIdDto['promo_id'], updatePromoDto: UpdatePromoDto) {
+    const updatedPromo = await this.promoModel.findByIdAndUpdate(
+      id,
+      updatePromoDto,
+      { new: true },
+    );
+
+    if (updatedPromo) {
+      if (updatePromoDto.is_active) {
+        const customers = await this.customerModel
+          .find({ fcm_token: { $ne: null } })
+          .select('fcm_token')
+          .exec();
+
+        const fcmTokens = customers.map((customer) => customer.fcm_token);
+
+        await this.firebaseService.sendPushNotification({
+          type: 'multiple',
+          title: `${updatedPromo.percent}% ${updatedPromo.title}`,
+          body: updatedPromo.description,
+          deviceTokens: fcmTokens,
+          data: {
+            type: 'promo',
+            id: updatedPromo._id.toString(),
+          },
+        });
+      }
+
+      return new SuccessResponse({ promo: { _id: updatedPromo._id } });
+    }
+
+    throwNotFoundException('promo_id', 'Employee does not exist');
   }
 
   remove(id: number) {
