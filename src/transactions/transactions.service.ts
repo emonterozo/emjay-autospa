@@ -1362,21 +1362,28 @@ export class TransactionsService {
           { new: true },
         );
 
-        if (
-          updatedTransaction &&
-          status === AvailedServiceStatus.DONE &&
-          updatedTransaction.customer_id
-        ) {
+        if (updatedTransaction && updatedTransaction?.customer_id) {
           const customer = await this.customerModel.findById(
             updatedTransaction.customer_id,
           );
 
-          await this.firebaseService.sendPushNotification({
-            type: 'single',
-            title: 'Service Completed',
-            body: 'Your vehicle service has been completed successfully. Feel free to reach out if you need anything else!',
-            deviceToken: customer?.fcm_token as string,
-          });
+          if (status === AvailedServiceStatus.ONGOING) {
+            await this.firebaseService.sendPushNotification({
+              type: 'single',
+              title: 'Service in Progress',
+              body: 'We’ve begun working on your vehicle. Reach out anytime if you need anything!',
+              deviceToken: customer?.fcm_token as string,
+            });
+          }
+
+          if (status === AvailedServiceStatus.DONE) {
+            await this.firebaseService.sendPushNotification({
+              type: 'single',
+              title: 'Service Completed',
+              body: 'Your vehicle service has been completed successfully. Feel free to reach out if you need anything else!',
+              deviceToken: customer?.fcm_token as string,
+            });
+          }
         }
 
         return new SuccessResponse({
