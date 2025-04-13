@@ -44,6 +44,7 @@ import { GetWeekSalesDto } from './dto/get-week-sales.dto';
 import { getDateRange } from '../common/utils/date-utils';
 import { GetTransactionStatisticsDto } from './dto/get-transaction-statistics.dto';
 import { Expense } from '../expenses/schema/expense.schema';
+import { FirebaseService } from '../firebase/firebase.service';
 
 const SIZE_DESCRIPTION: Record<VehicleSize, string> = {
   sm: 'Small',
@@ -114,6 +115,7 @@ export class TransactionsService {
     private readonly employeeModel: Model<Employee>,
     @InjectModel(Expense.name)
     private readonly expenseModel: Model<Expense>,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   async getTransactions(getTransactionDto: GetTransactionDto) {
@@ -1084,6 +1086,13 @@ export class TransactionsService {
                       : customer?.moto_wash_service_count,
                 },
               );
+
+              await this.firebaseService.sendPushNotification({
+                type: 'single',
+                title: 'Thank You for Choosing Us',
+                body: 'Your transaction is complete. Safe travels and see you next time!',
+                deviceToken: customer?.fcm_token as string,
+              });
             }
           }
 
@@ -1352,6 +1361,23 @@ export class TransactionsService {
           { $set: updateFields },
           { new: true },
         );
+
+        if (
+          updatedTransaction &&
+          status === AvailedServiceStatus.DONE &&
+          updatedTransaction.customer_id
+        ) {
+          const customer = await this.customerModel.findById(
+            updatedTransaction.customer_id,
+          );
+
+          await this.firebaseService.sendPushNotification({
+            type: 'single',
+            title: 'Service Completed',
+            body: 'Your vehicle service has been completed successfully. Feel free to reach out if you need anything else!',
+            deviceToken: customer?.fcm_token as string,
+          });
+        }
 
         return new SuccessResponse({
           transaction: {

@@ -40,11 +40,11 @@ export class FirebaseService {
     if (type === 'multiple') {
       const message: admin.messaging.MulticastMessage = {
         tokens: params.deviceTokens,
-        notification: {
+        data: {
+          ...data,
           title,
           body,
         },
-        data,
       };
 
       try {
@@ -58,11 +58,11 @@ export class FirebaseService {
     } else {
       const message: admin.messaging.Message = {
         token: params.deviceToken,
-        notification: {
+        data: {
+          ...data,
           title,
           body,
         },
-        data,
       };
 
       try {
