@@ -66,3 +66,8 @@ export enum APP {
   EMJAY_REWARDS = 'EMJAY_REWARDS',
   EMJAY_ADMIN = 'EMJAY_ADMIN',
 }
+
+export enum ChatReference {
+  EMJAY = 'emjay',
+  CUSTOMER = 'customer',
+}
