@@ -113,14 +113,12 @@ export class MessagesGateway
         (socket) => socket.data.role === ChatReference.CUSTOMER,
       );
 
-      console.log(sockets.length);
-
       if (customerSockets.length <= 0) {
         await this.firebaseService.sendPushNotification({
           type: 'single',
           title: 'New message from Emjay Admin',
           body: 'You’ve received a new message. Tap to reply!',
-          data: { type: 'message' },
+          data: { type: 'message', id: customerId! },
           deviceToken: customer.fcm_token,
         });
       }
