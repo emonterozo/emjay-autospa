@@ -1060,7 +1060,7 @@ export class TransactionsService {
 
             // Update wash count logic (Prevent negative wash count)
             sortedServices.forEach((service) => {
-              if (service.has_wash_count) {
+              if (service.has_wash_count && service.earning_points <= 0) {
                 customerWashCount = Math.max(
                   0,
                   customerWashCount + (service.is_free ? -10 : 1),
