@@ -26,6 +26,7 @@ import { Employee } from '../employees/schemas/employee.schema';
 import { ErrorResponse } from '../common/dto/error-response.dto';
 import {
   AvailedServiceStatus,
+  ExpenseCategory,
   ServiceCharge,
   StatisticsFilter,
   TransactionStatus,
@@ -779,8 +780,15 @@ export class TransactionsService {
       contact_number,
       service_id,
       service_charge,
+      discount,
+      price,
+      deduction,
     } = createTransactionDto;
-    const employeeShare = createTransactionDto.price * 0.4;
+    const profit = price - deduction;
+    const employeeShare = profit * 0.4;
+    const companyEarningsComputedValue = profit - employeeShare - discount;
+    const companyEarnings =
+      companyEarningsComputedValue > 0 ? companyEarningsComputedValue : 0;
 
     try {
       const savedTransaction = this.transactionModel.create({
@@ -798,15 +806,9 @@ export class TransactionsService {
             _id: new Types.ObjectId(),
             service_id: new Types.ObjectId(service_id),
             price: createTransactionDto.price,
-            discount:
-              service_charge === ServiceCharge.FREE
-                ? createTransactionDto.price
-                : 0,
-            deduction: 0,
-            company_earnings:
-              service_charge === ServiceCharge.FREE
-                ? 0
-                : createTransactionDto.price - employeeShare,
+            discount: discount,
+            deduction: deduction,
+            company_earnings: companyEarnings,
             employee_share: employeeShare,
             assigned_employee_id: [],
             start_date: null,
@@ -970,136 +972,149 @@ export class TransactionsService {
               ]),
             );
 
+          const doneTransaction = await this.transactionModel.findOne(
+            { _id: transaction_id },
+            {
+              availed_services: {
+                $filter: {
+                  input: '$availed_services',
+                  as: 'service',
+                  cond: {
+                    $eq: ['$$service.status', AvailedServiceStatus.DONE],
+                  },
+                },
+              },
+            },
+          );
+
+          let expenses = 0;
+
+          for (const service of doneTransaction!.availed_services) {
+            expenses += service.discount || 0;
+          }
+
           if (transaction.customer_id) {
             const customer = await this.customerModel.findById(
               transaction.customer_id,
             );
-            const doneTransaction = await this.transactionModel.findOne(
-              { _id: transaction_id },
+
+            const services = await Promise.all(
+              doneTransaction!.availed_services.map(async (availedService) => {
+                const service = await this.serviceModel.findById(
+                  availedService.service_id,
+                );
+
+                if (!service)
+                  throw new InternalServerErrorException(
+                    new ErrorResponse(500, [
+                      {
+                        field: 'service_id',
+                        message: 'Service does not exist',
+                      },
+                    ]),
+                  );
+
+                const price = service.price_list.find(
+                  (item) =>
+                    String(item.size) === String(transaction.vehicle_size),
+                );
+
+                return {
+                  id: service._id,
+                  service: service.title,
+                  points: price?.points ?? 0,
+                  earning_points: price?.earning_points ?? 0,
+                  is_free: availedService.is_free,
+                  has_wash_count: service.has_wash_count,
+                };
+              }),
+            );
+
+            const sortedServices = services
+              .filter(
+                (service): service is NonNullable<typeof service> =>
+                  service !== null,
+              )
+              .sort((a, b) => (a.is_free ? 1 : 0) - (b.is_free ? 1 : 0));
+
+            let customerPoints = customer?.points ?? 0;
+            let customerWashCount =
+              transaction.vehicle_type === VehicleType.CAR
+                ? (customer?.car_wash_service_count.find(
+                    (item) =>
+                      String(item.size) === String(transaction.vehicle_size),
+                  )?.count ?? 0)
+                : (customer?.moto_wash_service_count.find(
+                    (item) =>
+                      String(item.size) === String(transaction.vehicle_size),
+                  )?.count ?? 0);
+
+            // Update customer points
+            sortedServices.forEach((service) => {
+              customerPoints = Math.max(
+                0,
+                customerPoints +
+                  (service.is_free ? -service.points : service.earning_points),
+              );
+            });
+
+            // Update wash count logic (Prevent negative wash count)
+            sortedServices.forEach((service) => {
+              if (service.has_wash_count) {
+                customerWashCount = Math.max(
+                  0,
+                  customerWashCount + (service.is_free ? -10 : 1),
+                );
+              }
+            });
+
+            // Update customer wash count object
+            const updateWashCount = (
+              wash_count: { size: string; count: number }[],
+            ) =>
+              wash_count.map((item) =>
+                String(item.size) === String(transaction.vehicle_size)
+                  ? { size: item.size, count: customerWashCount }
+                  : item,
+              );
+
+            await this.customerModel.findByIdAndUpdate(
+              transaction.customer_id,
               {
-                availed_services: {
-                  $filter: {
-                    input: '$availed_services',
-                    as: 'service',
-                    cond: {
-                      $eq: ['$$service.status', AvailedServiceStatus.DONE],
-                    },
-                  },
-                },
+                points: customerPoints,
+                car_wash_service_count:
+                  transaction.vehicle_type === VehicleType.CAR
+                    ? updateWashCount(customer?.car_wash_service_count || [])
+                    : customer?.car_wash_service_count,
+                moto_wash_service_count:
+                  transaction.vehicle_type === VehicleType.MOTORCYCLE
+                    ? updateWashCount(customer?.moto_wash_service_count || [])
+                    : customer?.moto_wash_service_count,
               },
             );
 
-            if (doneTransaction) {
-              const services = await Promise.all(
-                doneTransaction.availed_services.map(async (availedService) => {
-                  const service = await this.serviceModel.findById(
-                    availedService.service_id,
-                  );
-
-                  if (!service)
-                    throw new InternalServerErrorException(
-                      new ErrorResponse(500, [
-                        {
-                          field: 'service_id',
-                          message: 'Service does not exist',
-                        },
-                      ]),
-                    );
-
-                  const price = service.price_list.find(
-                    (item) =>
-                      String(item.size) === String(transaction.vehicle_size),
-                  );
-
-                  return {
-                    id: service._id,
-                    service: service.title,
-                    points: price?.points ?? 0,
-                    earning_points: price?.earning_points ?? 0,
-                    is_free: availedService.is_free,
-                    has_wash_count: service.has_wash_count,
-                  };
-                }),
-              );
-
-              const sortedServices = services
-                .filter(
-                  (service): service is NonNullable<typeof service> =>
-                    service !== null,
-                )
-                .sort((a, b) => (a.is_free ? 1 : 0) - (b.is_free ? 1 : 0));
-
-              let customerPoints = customer?.points ?? 0;
-              let customerWashCount =
-                transaction.vehicle_type === VehicleType.CAR
-                  ? (customer?.car_wash_service_count.find(
-                      (item) =>
-                        String(item.size) === String(transaction.vehicle_size),
-                    )?.count ?? 0)
-                  : (customer?.moto_wash_service_count.find(
-                      (item) =>
-                        String(item.size) === String(transaction.vehicle_size),
-                    )?.count ?? 0);
-
-              // Update customer points
-              sortedServices.forEach((service) => {
-                customerPoints = Math.max(
-                  0,
-                  customerPoints +
-                    (service.is_free
-                      ? -service.points
-                      : service.earning_points),
-                );
-              });
-
-              // Update wash count logic (Prevent negative wash count)
-              sortedServices.forEach((service) => {
-                if (service.has_wash_count) {
-                  customerWashCount = Math.max(
-                    0,
-                    customerWashCount + (service.is_free ? -10 : 1),
-                  );
-                }
-              });
-
-              // Update customer wash count object
-              const updateWashCount = (
-                wash_count: { size: string; count: number }[],
-              ) =>
-                wash_count.map((item) =>
-                  String(item.size) === String(transaction.vehicle_size)
-                    ? { size: item.size, count: customerWashCount }
-                    : item,
-                );
-
-              await this.customerModel.findByIdAndUpdate(
-                transaction.customer_id,
-                {
-                  points: customerPoints,
-                  car_wash_service_count:
-                    transaction.vehicle_type === VehicleType.CAR
-                      ? updateWashCount(customer?.car_wash_service_count || [])
-                      : customer?.car_wash_service_count,
-                  moto_wash_service_count:
-                    transaction.vehicle_type === VehicleType.MOTORCYCLE
-                      ? updateWashCount(customer?.moto_wash_service_count || [])
-                      : customer?.moto_wash_service_count,
-                },
-              );
-
-              await this.firebaseService.sendPushNotification({
-                type: 'single',
-                title: 'Thank You for Choosing Us',
-                body: 'Your transaction is complete. Safe travels and see you next time!',
-                deviceToken: customer?.fcm_token as string,
-              });
-            }
+            await this.firebaseService.sendPushNotification({
+              type: 'single',
+              title: 'Thank You for Choosing Us',
+              body: 'Your transaction is complete. Safe travels and see you next time!',
+              deviceToken: customer?.fcm_token as string,
+            });
           }
 
           await this.transactionModel.findByIdAndUpdate(transaction_id, {
             status: TransactionStatus.COMPLETED,
             check_out: new Date(),
           });
+
+          if (expenses > 0) {
+            await this.expenseModel.create({
+              category: ExpenseCategory.OTHERS,
+              description: 'Promotional expenses',
+              amount: expenses,
+              date: new Date(),
+            });
+          }
+
           return new SuccessResponse({
             transaction: { _id: transaction._id },
           });

@@ -44,6 +44,12 @@ export class CreateTransactionDto {
   @IsNumber()
   price: number;
 
+  @IsNumber()
+  discount: number;
+
+  @IsNumber()
+  deduction: number;
+
   @IsEnum(ServiceCharge)
   service_charge: ServiceCharge;
 
