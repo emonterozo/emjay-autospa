@@ -49,6 +49,9 @@ export class AvailedService {
   is_free: boolean;
 
   @Prop({ required: true })
+  is_points_cash: boolean;
+
+  @Prop({ required: true })
   is_paid: boolean;
 }
 

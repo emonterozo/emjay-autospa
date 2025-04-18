@@ -44,6 +44,7 @@ export enum AvailedServiceStatus {
 export enum ServiceCharge {
   FREE = 'free',
   NOT_FREE = 'not free',
+  POINTS_CASH = 'points & cash',
 }
 
 export enum AccountType {

@@ -816,6 +816,7 @@ export class TransactionsService {
             status: AvailedServiceStatus.PENDING,
             is_free: service_charge === ServiceCharge.FREE,
             is_paid: service_charge === ServiceCharge.FREE,
+            is_points_cash: service_charge === ServiceCharge.POINTS_CASH,
           },
         ],
       });
@@ -856,6 +857,7 @@ export class TransactionsService {
       status: service.status,
       is_free: service.is_free,
       is_paid: service.is_paid,
+      is_points_cash: service.is_points_cash,
       discount: service.discount,
     }));
 
@@ -1025,6 +1027,8 @@ export class TransactionsService {
                   points: price?.points ?? 0,
                   earning_points: price?.earning_points ?? 0,
                   is_free: availedService.is_free,
+                  is_points_wash: availedService.is_points_cash,
+                  discount: availedService.discount,
                   has_wash_count: service.has_wash_count,
                 };
               }),
@@ -1051,19 +1055,35 @@ export class TransactionsService {
 
             // Update customer points
             sortedServices.forEach((service) => {
-              customerPoints = Math.max(
-                0,
-                customerPoints +
-                  (service.is_free ? -service.points : service.earning_points),
-              );
+              let pointsChange = 0;
+
+              if (service.is_free) {
+                pointsChange = -service.points;
+              } else if (service.is_points_wash) {
+                pointsChange = -service.discount;
+              } else {
+                pointsChange = service.earning_points;
+              }
+
+              customerPoints = Math.max(0, customerPoints + pointsChange);
             });
 
             // Update wash count logic (Prevent negative wash count)
             sortedServices.forEach((service) => {
-              if (service.has_wash_count && service.earning_points <= 0) {
+              if (service.has_wash_count) {
+                let washCountChange: number;
+
+                if (service.is_free && service.earning_points <= 0) {
+                  washCountChange = -10;
+                } else if (service.is_free || service.is_points_wash) {
+                  washCountChange = 0;
+                } else {
+                  washCountChange = 1;
+                }
+
                 customerWashCount = Math.max(
                   0,
-                  customerWashCount + (service.is_free ? -10 : 1),
+                  customerWashCount + washCountChange,
                 );
               }
             });
@@ -1271,6 +1291,7 @@ export class TransactionsService {
         status: availedService.status,
         is_free: availedService.is_free,
         is_paid: availedService.is_paid,
+        is_points_cash: availedService.is_points_cash,
         start_date: availedService.start_date,
         end_date: availedService.end_date,
         assigned_employees: availedService.assigned_employee_id,
@@ -1320,6 +1341,7 @@ export class TransactionsService {
           assigned_employees,
           is_free,
           is_paid,
+          is_points_cash,
         } = updateAvailedServiceDto;
         const profit = availedService.price - deduction;
         const employeeShare = profit * 0.4;
@@ -1342,6 +1364,7 @@ export class TransactionsService {
           'availed_services.$.status': status,
           'availed_services.$.is_free': is_free,
           'availed_services.$.is_paid': is_free ? true : is_paid,
+          'availed_services.$.is_points_cash': is_points_cash,
         };
 
         if (status === AvailedServiceStatus.PENDING) {

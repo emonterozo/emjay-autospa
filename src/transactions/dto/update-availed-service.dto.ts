@@ -24,6 +24,9 @@ export class UpdateAvailedServiceDto {
   @IsBoolean()
   is_paid: boolean;
 
+  @IsBoolean()
+  is_points_cash: boolean;
+
   @IsEnum(AvailedServiceStatus)
   status: AvailedServiceStatus;
 
