@@ -60,5 +60,5 @@ export const formatTimestamp = (
     value = formatDate(localTime, 'MMM d yyyy, hh:mm a');
   }
 
-  return formatDate(localTime, 'MMM d, hh:mm a');
+  return value;
 };
