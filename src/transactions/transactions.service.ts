@@ -1159,8 +1159,13 @@ export class TransactionsService {
     id: ObjectIdDto['transaction_id'],
     createAvailedServiceDto: CreateAvailedServiceDto,
   ) {
-    const { service_id, service_charge } = createAvailedServiceDto;
-    const employeeShare = createAvailedServiceDto.price * 0.4;
+    const { service_id, service_charge, discount, deduction } =
+      createAvailedServiceDto;
+    const profit = createAvailedServiceDto.price - deduction;
+    const employeeShare = profit * 0.4;
+    const companyEarningsComputedValue = profit - employeeShare - discount;
+    const companyEarnings =
+      companyEarningsComputedValue > 0 ? companyEarningsComputedValue : 0;
 
     const service = await this.serviceModel.findById(service_id);
     if (!service) {
@@ -1195,15 +1200,9 @@ export class TransactionsService {
             _id: new Types.ObjectId(),
             service_id: new Types.ObjectId(service_id),
             price: createAvailedServiceDto.price,
-            discount:
-              service_charge === ServiceCharge.FREE
-                ? createAvailedServiceDto.price
-                : 0,
-            deduction: 0,
-            company_earnings:
-              service_charge === ServiceCharge.FREE
-                ? 0
-                : createAvailedServiceDto.price - employeeShare,
+            discount: discount,
+            deduction: deduction,
+            company_earnings: companyEarnings,
             employee_share: employeeShare,
             assigned_employee_id: [],
             start_date: null,
@@ -1211,6 +1210,7 @@ export class TransactionsService {
             status: AvailedServiceStatus.PENDING,
             is_free: service_charge === ServiceCharge.FREE,
             is_paid: service_charge === ServiceCharge.FREE,
+            is_points_cash: service_charge === ServiceCharge.POINTS_CASH,
           },
         },
       },

@@ -11,4 +11,10 @@ export class CreateAvailedServiceDto {
 
   @IsEnum(ServiceCharge)
   service_charge: ServiceCharge;
+
+  @IsNumber()
+  discount: number;
+
+  @IsNumber()
+  deduction: number;
 }
