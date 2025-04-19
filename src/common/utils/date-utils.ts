@@ -3,7 +3,6 @@ import {
   isSameYear,
   differenceInHours,
   formatDistanceToNow,
-  format as formatDate,
 } from 'date-fns';
 
 export function isValidDate(value: string): boolean {
@@ -32,32 +31,52 @@ export const getDateRange = (start: Date, end: Date) => {
   return dates;
 };
 
-export const formatTimestamp = (
-  timestamp: Date,
-  timeZoneOffsetMinutes = 480,
+const formatInTimeZone = (
+  date: Date,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions,
 ) => {
-  // Shift the timestamp from UTC to your target local time (default is UTC+8)
-  const localTime = new Date(
-    timestamp.getTime() + timeZoneOffsetMinutes * 60 * 1000,
-  );
-  const now = new Date(
-    new Date().getTime() + timeZoneOffsetMinutes * 60 * 1000,
-  );
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    ...options,
+  }).format(date);
+};
 
-  const sameDay = isSameDay(localTime, now);
-  const sameYear = isSameYear(localTime, now);
-  const hoursAgo = differenceInHours(now, localTime);
+export const formatTimestamp = (timestamp: Date, timeZone = 'Asia/Manila') => {
+  const date = new Date(timestamp);
+  const now = new Date();
+
+  const sameDay = isSameDay(date, now);
+  const sameYear = isSameYear(date, now);
+  const hoursAgo = differenceInHours(now, date);
 
   let value = '';
 
   if (sameDay && hoursAgo <= 3) {
-    value = formatDistanceToNow(localTime, { addSuffix: true });
+    value = formatDistanceToNow(date, { addSuffix: true });
   } else if (sameDay) {
-    value = formatDate(localTime, 'hh:mm a');
+    value = formatInTimeZone(date, timeZone, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }); // "01:22 PM"
   } else if (sameYear) {
-    value = formatDate(localTime, 'MMM d, hh:mm a');
+    value = formatInTimeZone(date, timeZone, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }); // "Apr 19, 01:22 PM"
   } else {
-    value = formatDate(localTime, 'MMM d yyyy, hh:mm a');
+    value = formatInTimeZone(date, timeZone, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }); // "Apr 19 2024, 01:22 PM"
   }
 
   return value;

@@ -11,7 +11,6 @@ import { SuccessResponse } from '../common/dto/success-response.dto';
 import { formatTimestamp } from '../common/utils/date-utils';
 import { Customer } from '../customers/schemas/customer.schema';
 import { ChatReference } from 'src/common/enum';
-import { differenceInHours, formatDate, formatDistanceToNow } from 'date-fns';
 
 type CustomerWithId = Pick<Customer, 'first_name' | 'last_name' | 'gender'> & {
   _id: Types.ObjectId;
@@ -47,11 +46,6 @@ export class MessagesService {
         .exec();
 
       const messages = data.map((item) => {
-        const date = new Date(item.last_message.timestamp);
-        const now = new Date();
-
-        const hoursAgo = differenceInHours(now, date);
-
         return {
           _id: item._id,
           customer_id: item.customer_id._id,
@@ -62,10 +56,7 @@ export class MessagesService {
           customer_unread_count: item.customer_unread_count,
           last_message: {
             ...item.last_message,
-            timestamp:
-              hoursAgo <= 48
-                ? formatDistanceToNow(date, { addSuffix: true })
-                : formatDate(date, 'MMM dd'),
+            timestamp: formatTimestamp(item.last_message.timestamp),
           },
         };
       });
