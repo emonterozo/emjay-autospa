@@ -32,25 +32,33 @@ export const getDateRange = (start: Date, end: Date) => {
   return dates;
 };
 
-export const formatTimestamp = (timestamp: Date) => {
-  const date = new Date(timestamp);
-  const now = new Date();
+export const formatTimestamp = (
+  timestamp: Date,
+  timeZoneOffsetMinutes = 480,
+) => {
+  // Shift the timestamp from UTC to your target local time (default is UTC+8)
+  const localTime = new Date(
+    timestamp.getTime() + timeZoneOffsetMinutes * 60 * 1000,
+  );
+  const now = new Date(
+    new Date().getTime() + timeZoneOffsetMinutes * 60 * 1000,
+  );
 
-  const sameDay = isSameDay(date, now);
-  const sameYear = isSameYear(date, now);
-  const hoursAgo = differenceInHours(now, date);
+  const sameDay = isSameDay(localTime, now);
+  const sameYear = isSameYear(localTime, now);
+  const hoursAgo = differenceInHours(now, localTime);
 
   let value = '';
 
   if (sameDay && hoursAgo <= 3) {
-    value = formatDistanceToNow(date, { addSuffix: true }); // "2 hours ago"
+    value = formatDistanceToNow(localTime, { addSuffix: true });
   } else if (sameDay) {
-    value = formatDate(date, 'hh:mm a'); // "03:45 PM"
+    value = formatDate(localTime, 'hh:mm a');
   } else if (sameYear) {
-    value = formatDate(date, 'MMM d, hh:mm a'); // "Apr 14, 03:45 PM"
+    value = formatDate(localTime, 'MMM d, hh:mm a');
   } else {
-    value = formatDate(date, 'MMM d yyyy, hh:mm a'); // "Apr 14 2023, 03:45 PM"
+    value = formatDate(localTime, 'MMM d yyyy, hh:mm a');
   }
 
-  return value;
+  return formatDate(localTime, 'MMM d, hh:mm a');
 };
