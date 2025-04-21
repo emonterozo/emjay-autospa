@@ -12,6 +12,7 @@ import { PromosModule } from './promos/promos.module';
 import { VersionModule } from './version/version.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { MessagesModule } from './messages/messages.module';
+import { LoggerModule } from './logger/logger.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MessagesModule } from './messages/messages.module';
     VersionModule,
     FirebaseModule,
     MessagesModule,
+    LoggerModule,
   ],
 })
 export class AppModule {}

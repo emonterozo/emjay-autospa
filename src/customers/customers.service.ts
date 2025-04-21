@@ -29,6 +29,7 @@ import { jwtSign } from '../common/utils/jwtSign';
 import { OtpDto } from './dto/otp.dto';
 import { PromosService } from '../promos/promos.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LoggerService } from '../logger/logger.service';
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000);
@@ -73,7 +74,11 @@ export class CustomersService {
     private readonly transactionService: TransactionsService,
     private readonly configService: ConfigService,
     private readonly promoService: PromosService,
-  ) {}
+    private readonly loggerService: LoggerService,
+  ) {
+    this.loggerService.setContext(CustomersService.name);
+  }
+
   async getFreeWashPoints(id: ObjectIdDto['customer_id']) {
     const customer = await this.customerModel.findById(id);
 
@@ -166,6 +171,7 @@ export class CustomersService {
       MessageType.VERIFICATION,
       otp,
       this.configService,
+      this.loggerService,
     );
 
     if (response.success) {
@@ -239,7 +245,15 @@ export class CustomersService {
     const { contact_number, password } = loginDto;
     const customer = await this.customerModel.findOne({ contact_number });
 
-    if (!customer || !(await bcrypt.compare(password, customer.password)))
+    this.loggerService.log(`Customer try to login`, {
+      contact_number: loginDto.contact_number,
+    });
+
+    if (!customer || !(await bcrypt.compare(password, customer.password))) {
+      this.loggerService.error(`Customer failed to login`, {
+        contact_number: loginDto.contact_number,
+      });
+
       throw new UnauthorizedException(
         new ErrorResponse(401, [
           {
@@ -248,6 +262,7 @@ export class CustomersService {
           },
         ]),
       );
+    }
 
     await this.customerModel.findByIdAndUpdate(customer._id, {
       $set: { fcm_token: loginDto.fcm_token },
@@ -284,6 +299,7 @@ export class CustomersService {
       MessageType.VERIFICATION,
       otp,
       this.configService,
+      this.loggerService,
     );
 
     if (response.success) {
@@ -317,6 +333,7 @@ export class CustomersService {
       message_type!,
       otp,
       this.configService,
+      this.loggerService,
     );
 
     if (response.success) {
@@ -391,6 +408,7 @@ export class CustomersService {
       MessageType.FORGOT,
       otp,
       this.configService,
+      this.loggerService,
     );
 
     if (response.success) {
