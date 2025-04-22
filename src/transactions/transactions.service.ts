@@ -1128,7 +1128,7 @@ export class TransactionsService {
 
           if (expenses > 0) {
             await this.expenseModel.create({
-              category: ExpenseCategory.OTHERS,
+              category: ExpenseCategory.PROMOTIONS,
               description: 'Promotional expenses',
               amount: expenses,
               date: new Date(),
