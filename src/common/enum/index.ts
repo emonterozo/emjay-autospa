@@ -25,6 +25,8 @@ export enum ExpenseCategory {
   ELECTRICITY = 'ELECTRICITY',
   RENT = 'RENT',
   CONSUMABLES = 'CONSUMABLES',
+  WATER = 'WATER',
+  PROMOTIONS = 'PROMOTIONS',
   OTHERS = 'OTHERS',
 }
 
