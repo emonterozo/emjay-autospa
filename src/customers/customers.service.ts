@@ -465,6 +465,7 @@ export class CustomersService {
       last_name: updatedCustomer?.last_name ?? '',
       gender: updatedCustomer?.gender ?? '',
       birth_date: updatedCustomer?.birth_date ?? '',
+      fcm_token: updatedCustomer?.fcm_token ?? '',
     };
 
     const { accessToken, refreshToken } = jwtSign(userData, this.configService);
