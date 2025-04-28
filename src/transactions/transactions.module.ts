@@ -9,6 +9,11 @@ import { Employee, EmployeeSchema } from '../employees/schemas/employee.schema';
 import { Customer, CustomerSchema } from '../customers/schemas/customer.schema';
 import { Expense, ExpenseSchema } from '../expenses/schema/expense.schema';
 import { FirebaseModule } from '../firebase/firebase.module';
+import {
+  Conversation,
+  ConversationSchema,
+} from '../messages/schemas/conversation.schema';
+import { Message, MessageSchema } from '../messages/schemas/message.schema';
 
 @Module({
   imports: [
@@ -18,6 +23,8 @@ import { FirebaseModule } from '../firebase/firebase.module';
       { name: Employee.name, schema: EmployeeSchema },
       { name: Customer.name, schema: CustomerSchema },
       { name: Expense.name, schema: ExpenseSchema },
+      { name: Conversation.name, schema: ConversationSchema },
+      { name: Message.name, schema: MessageSchema },
     ]),
     FirebaseModule,
   ],

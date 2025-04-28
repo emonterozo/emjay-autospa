@@ -87,6 +87,12 @@ export class Transaction {
   @Prop({ type: Date })
   check_out?: Date;
 
+  @Prop({ required: true, default: false })
+  is_ongoing_notification_sent: boolean;
+
+  @Prop({ required: true, default: false })
+  is_done_notification_sent: boolean;
+
   @Prop({ type: [AvailedServiceSchema], default: [] })
   availed_services: AvailedService[];
 }

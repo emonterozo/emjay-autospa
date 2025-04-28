@@ -46,6 +46,8 @@ import { getDateRange } from '../common/utils/date-utils';
 import { GetTransactionStatisticsDto } from './dto/get-transaction-statistics.dto';
 import { Expense } from '../expenses/schema/expense.schema';
 import { FirebaseService } from '../firebase/firebase.service';
+import { Conversation } from '../messages/schemas/conversation.schema';
+import { Message } from '../messages/schemas/message.schema';
 
 const SIZE_DESCRIPTION: Record<VehicleSize, string> = {
   sm: 'Small',
@@ -116,6 +118,10 @@ export class TransactionsService {
     private readonly employeeModel: Model<Employee>,
     @InjectModel(Expense.name)
     private readonly expenseModel: Model<Expense>,
+    @InjectModel(Conversation.name)
+    private readonly conversationModel: Model<Conversation>,
+    @InjectModel(Message.name)
+    private readonly messageModel: Model<Message>,
     private readonly firebaseService: FirebaseService,
   ) {}
 
@@ -801,6 +807,8 @@ export class TransactionsService {
         status: TransactionStatus.ONGOING,
         check_in: new Date(),
         check_out: null,
+        is_ongoing_notification_sent: false,
+        is_done_notification_sent: false,
         availed_services: [
           {
             _id: new Types.ObjectId(),
@@ -1113,11 +1121,49 @@ export class TransactionsService {
               },
             );
 
+            const body =
+              'Your transaction is complete. Safe travels and see you next time!';
+
+            await this.messageModel.create({
+              customer_id: new Types.ObjectId(customer?.id),
+              message: body,
+              timestamp: new Date(),
+              from: 'emjay',
+              is_read: false,
+            });
+
+            await this.conversationModel.findOneAndUpdate(
+              { customer_id: new Types.ObjectId(customer?.id) },
+              {
+                $set: {
+                  last_message: {
+                    message: body,
+                    timestamp: new Date(),
+                    from: 'emjay',
+                  },
+                },
+                $inc: {
+                  customer_unread_count: 1,
+                },
+                $setOnInsert: {
+                  customer_id: new Types.ObjectId(customer?.id),
+                },
+              },
+              {
+                new: true,
+                upsert: true,
+              },
+            );
+
             await this.firebaseService.sendPushNotification({
               type: 'single',
               title: 'Thank You for Choosing Us',
-              body: 'Your transaction is complete. Safe travels and see you next time!',
+              body: body,
               deviceToken: customer?.fcm_token as string,
+              data: {
+                type: 'message',
+                id: customer?.id as string,
+              },
             });
           }
 
@@ -1405,22 +1451,125 @@ export class TransactionsService {
             updatedTransaction.customer_id,
           );
 
-          if (status === AvailedServiceStatus.ONGOING) {
+          if (
+            status === AvailedServiceStatus.ONGOING &&
+            !updatedTransaction.is_ongoing_notification_sent
+          ) {
+            const body =
+              'We’ve begun working on your vehicle. Reach out anytime if you need anything!';
+
+            await this.messageModel.create({
+              customer_id: new Types.ObjectId(customer?.id),
+              message: body,
+              timestamp: new Date(),
+              from: 'emjay',
+              is_read: false,
+            });
+
+            await this.conversationModel.findOneAndUpdate(
+              { customer_id: new Types.ObjectId(customer?.id) },
+              {
+                $set: {
+                  last_message: {
+                    message: body,
+                    timestamp: new Date(),
+                    from: 'emjay',
+                  },
+                },
+                $inc: {
+                  customer_unread_count: 1,
+                },
+                $setOnInsert: {
+                  customer_id: new Types.ObjectId(customer?.id),
+                },
+              },
+              {
+                new: true,
+                upsert: true,
+              },
+            );
+
             await this.firebaseService.sendPushNotification({
               type: 'single',
               title: 'Service in Progress',
-              body: 'We’ve begun working on your vehicle. Reach out anytime if you need anything!',
+              body: body,
               deviceToken: customer?.fcm_token as string,
+              data: {
+                type: 'message',
+                id: customer?.id as string,
+              },
             });
+
+            await this.transactionModel.findOneAndUpdate(
+              {
+                _id: transaction_id,
+              },
+              { $set: { is_ongoing_notification_sent: true } },
+            );
           }
 
-          if (status === AvailedServiceStatus.DONE) {
+          const hasPendingOrOngoing = updatedTransaction.availed_services.some(
+            (item) =>
+              item.status === AvailedServiceStatus.PENDING ||
+              item.status === AvailedServiceStatus.ONGOING,
+          );
+
+          if (
+            status === AvailedServiceStatus.DONE &&
+            !hasPendingOrOngoing &&
+            !updatedTransaction.is_done_notification_sent
+          ) {
+            const body =
+              'Your vehicle service has been completed successfully. Feel free to reach out if you need anything else!';
+
+            await this.messageModel.create({
+              customer_id: new Types.ObjectId(customer?.id),
+              message: body,
+              timestamp: new Date(),
+              from: 'emjay',
+              is_read: false,
+            });
+
+            await this.conversationModel.findOneAndUpdate(
+              { customer_id: new Types.ObjectId(customer?.id) },
+              {
+                $set: {
+                  last_message: {
+                    message: body,
+                    timestamp: new Date(),
+                    from: 'emjay',
+                  },
+                },
+                $inc: {
+                  customer_unread_count: 1,
+                },
+                $setOnInsert: {
+                  customer_id: new Types.ObjectId(customer?.id),
+                },
+              },
+              {
+                new: true,
+                upsert: true,
+              },
+            );
+
             await this.firebaseService.sendPushNotification({
               type: 'single',
               title: 'Service Completed',
-              body: 'Your vehicle service has been completed successfully. Feel free to reach out if you need anything else!',
+              body: body,
               deviceToken: customer?.fcm_token as string,
+              data: {
+                type: 'message',
+                id: customer?.id as string,
+              },
             });
+
+            await this.transactionModel.findOneAndUpdate(
+              {
+                _id: transaction_id,
+              },
+              { $set: { is_done_notification_sent: true } },
+            );
           }
         }
 

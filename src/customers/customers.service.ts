@@ -30,6 +30,9 @@ import { OtpDto } from './dto/otp.dto';
 import { PromosService } from '../promos/promos.service';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LoggerService } from '../logger/logger.service';
+import { FirebaseService } from '../firebase/firebase.service';
+import { Conversation } from '../messages/schemas/conversation.schema';
+import { Message } from '../messages/schemas/message.schema';
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000);
@@ -71,6 +74,11 @@ export class CustomersService {
   constructor(
     @InjectModel(Customer.name) private readonly customerModel: Model<Customer>,
     @InjectModel(Otp.name) private readonly otpModel: Model<Otp>,
+    @InjectModel(Conversation.name)
+    private readonly conversationModel: Model<Conversation>,
+    @InjectModel(Message.name)
+    private readonly messageModel: Model<Message>,
+    private readonly firebaseService: FirebaseService,
     private readonly transactionService: TransactionsService,
     private readonly configService: ConfigService,
     private readonly promoService: PromosService,
@@ -386,7 +394,53 @@ export class CustomersService {
       last_name: updatedCustomer?.last_name ?? '',
       gender: updatedCustomer?.gender ?? '',
       birth_date: updatedCustomer?.birth_date,
+      fcm_token: updatedCustomer?.fcm_token ?? '',
     };
+
+    const body =
+      "Thank you for joining us! You've taken the first step toward a spotless ride. We’re excited to serve you!";
+
+    await this.messageModel.create({
+      customer_id: new Types.ObjectId(customer?.id),
+      message: body,
+      timestamp: new Date(),
+      from: 'emjay',
+      is_read: false,
+    });
+
+    await this.conversationModel.findOneAndUpdate(
+      { customer_id: new Types.ObjectId(customer?.id) },
+      {
+        $set: {
+          last_message: {
+            message: body,
+            timestamp: new Date(),
+            from: 'emjay',
+          },
+        },
+        $inc: {
+          customer_unread_count: 1,
+        },
+        $setOnInsert: {
+          customer_id: new Types.ObjectId(customer?.id),
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+      },
+    );
+
+    await this.firebaseService.sendPushNotification({
+      type: 'single',
+      title: 'Welcome to Emjay Rewards',
+      body: body,
+      deviceToken: customer?.fcm_token,
+      data: {
+        type: 'message',
+        id: customer_id.toString(),
+      },
+    });
 
     const { accessToken, refreshToken } = jwtSign(userData, this.configService);
 
