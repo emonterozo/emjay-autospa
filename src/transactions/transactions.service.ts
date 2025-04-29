@@ -191,23 +191,23 @@ export class TransactionsService {
     const formattedTransaction: any[] = [];
 
     transactions.forEach((transaction) => {
-      transaction.availed_services
-        .filter((service) =>
-          [AvailedServiceStatus.PENDING, AvailedServiceStatus.ONGOING].includes(
-            service.status,
-          ),
-        )
-        .forEach((service) => {
-          const { title } = service.service_id;
+      const length = transaction.availed_services.filter(
+        (service) => service.status !== AvailedServiceStatus.CANCELLED,
+      ).length;
 
-          formattedTransaction.push({
-            _id: service._id.toString(),
-            service_name: title,
-            status: service.status,
-            date: transaction.check_in,
-            description: `${transaction.vehicle_type.charAt(0).toUpperCase()}${transaction.vehicle_type.slice(1)} ${SIZE_DESCRIPTION[transaction.vehicle_size]}`,
-          });
-        });
+      formattedTransaction.push({
+        _id: transaction._id,
+        service_name: `${length} Service${length > 1 ? 's' : ''} Selected`,
+        status: transaction.availed_services.some(
+          (service) =>
+            service.status === AvailedServiceStatus.ONGOING ||
+            service.status === AvailedServiceStatus.DONE,
+        )
+          ? 'Ongoing'
+          : 'Pending',
+        date: transaction.check_in,
+        description: `${transaction.vehicle_type.charAt(0).toUpperCase()}${transaction.vehicle_type.slice(1)} ${SIZE_DESCRIPTION[transaction.vehicle_size]}`,
+      });
     });
 
     return new SuccessResponse({
