@@ -104,7 +104,7 @@ export class CustomersService {
     }[] = [];
 
     customer.car_wash_service_count.forEach((item) => {
-      if (item.count >= 10) {
+      if (item.count >= 9) {
         free_wash.push({
           size: item.size,
           count: item.count,
@@ -114,7 +114,7 @@ export class CustomersService {
     });
 
     customer.moto_wash_service_count.forEach((item) => {
-      if (item.count >= 10) {
+      if (item.count >= 9) {
         free_wash.push({
           size: item.size,
           count: item.count,
