@@ -6,4 +6,7 @@ export class AccountDto {
 
   @IsString()
   password: string;
+
+  @IsString()
+  fcm_token: string;
 }

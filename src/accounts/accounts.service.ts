@@ -41,6 +41,10 @@ export class AccountsService {
         ]),
       );
 
+    await this.accountModel.findByIdAndUpdate(user._id, {
+      $set: { fcm_token: accountDto.fcm_token },
+    });
+
     const userData = {
       _id: user._id.toString(),
       username: user.username,
@@ -49,6 +53,13 @@ export class AccountsService {
 
     const { accessToken, refreshToken } = jwtSign(userData, this.configService);
 
-    return new SuccessResponse({ user: userData, accessToken, refreshToken });
+    return new SuccessResponse(
+      {
+        user: userData,
+        accessToken,
+        refreshToken,
+      },
+      200,
+    );
   }
 }

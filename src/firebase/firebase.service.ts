@@ -79,8 +79,10 @@ export class FirebaseService {
 
       try {
         const response = await this.firebaseApp.messaging().send(message);
+        console.log('response', response);
         return response;
       } catch (error) {
+        console.log('ee', error);
         return error;
       }
     }

@@ -11,6 +11,7 @@ import {
 import { Message, MessageSchema } from './schemas/message.schema';
 import { Customer, CustomerSchema } from '../customers/schemas/customer.schema';
 import { FirebaseModule } from '../firebase/firebase.module';
+import { Account, AccountSchema } from '../accounts/schemas/account.schema';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FirebaseModule } from '../firebase/firebase.module';
       { name: Customer.name, schema: CustomerSchema },
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
+      { name: Account.name, schema: AccountSchema },
     ]),
     FirebaseModule,
   ],

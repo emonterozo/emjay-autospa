@@ -21,6 +21,7 @@ import { ChatReference } from '../common/enum';
 import { formatTimestamp } from '../common/utils/date-utils';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Customer } from '../customers/schemas/customer.schema';
+import { Account } from '../accounts/schemas/account.schema';
 
 @WebSocketGateway({
   cors: {
@@ -34,6 +35,8 @@ export class MessagesGateway
   private readonly logger: Logger = new Logger('MessagesGateway');
 
   constructor(
+    @InjectModel(Account.name)
+    private readonly accountModel: Model<Account>,
     @InjectModel(Customer.name)
     private readonly customerModel: Model<Customer>,
     @InjectModel(Conversation.name)
@@ -103,23 +106,53 @@ export class MessagesGateway
         },
       });
 
+    const sockets = await this.server.in(`room-${customerId}`).fetchSockets();
+    let token = '';
+
     if (from.ref === ChatReference.EMJAY) {
       const customer = await this.customerModel.findById(customerId);
       if (!customer) return;
+      token = customer.fcm_token;
+    }
 
-      const sockets = await this.server.in(`room-${customerId}`).fetchSockets();
-      const customerSockets = sockets.filter(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        (socket) => socket.data.role === ChatReference.CUSTOMER,
+    const filteredSocket = sockets.find((socket) => {
+      const data = socket.data as { role: ChatReference };
+      return (
+        data.role ===
+        (from.ref === ChatReference.EMJAY
+          ? ChatReference.CUSTOMER
+          : ChatReference.EMJAY)
       );
+    });
 
-      if (customerSockets.length <= 0) {
+    if (!filteredSocket) {
+      let tokens: string[] = [];
+      if (from.ref === ChatReference.CUSTOMER) {
+        const accounts = await this.accountModel
+          .find()
+          .select('fcm_token')
+          .lean();
+
+        tokens = accounts.map((item) => item.fcm_token);
+      }
+
+      const data = {
+        title: `New message from Emjay ${from.ref === ChatReference.EMJAY ? 'Admin' : 'Customer'}`,
+        body: 'You’ve received a new message. Tap to reply!',
+        data: { type: 'message', id: customerId! },
+      };
+
+      if (from.ref === ChatReference.EMJAY) {
         await this.firebaseService.sendPushNotification({
+          ...data,
           type: 'single',
-          title: 'New message from Emjay Admin',
-          body: 'You’ve received a new message. Tap to reply!',
-          data: { type: 'message', id: customerId! },
-          deviceToken: customer.fcm_token,
+          deviceToken: token,
+        });
+      } else {
+        await this.firebaseService.sendPushNotification({
+          ...data,
+          type: 'multiple',
+          deviceTokens: tokens,
         });
       }
     }

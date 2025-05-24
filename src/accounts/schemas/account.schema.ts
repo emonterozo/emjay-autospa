@@ -14,6 +14,9 @@ export class Account {
 
   @Prop({ required: true, enum: AccountType })
   type: AccountType;
+
+  @Prop({ required: true })
+  fcm_token: string;
 }
 
 export const AccountSchema = SchemaFactory.createForClass(Account);
