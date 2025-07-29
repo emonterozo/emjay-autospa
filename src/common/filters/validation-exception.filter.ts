@@ -23,19 +23,37 @@ export class ValidationExceptionFilter implements ExceptionFilter {
 
     const errors: ValidationErrorResponse[] = [];
 
-    // Check if the exception response contains validation errors
+    // Recursive extractor function
+    function extractErrors(
+      validationErrors: ValidationError[],
+      parentPath: string = '',
+    ) {
+      for (const error of validationErrors) {
+        const fieldPath = parentPath
+          ? `${parentPath}.${error.property}`
+          : error.property;
+
+        if (error.constraints) {
+          for (const msg of Object.values(error.constraints)) {
+            errors.push({
+              field: fieldPath,
+              message: msg,
+            });
+          }
+        }
+
+        if (error.children && error.children.length > 0) {
+          extractErrors(error.children, fieldPath);
+        }
+      }
+    }
+
+    // Handle validation errors from ValidationPipe
     if (
       typeof exceptionResponse === 'object' &&
       exceptionResponse['message'] instanceof Array
     ) {
-      exceptionResponse['message'].forEach((error: ValidationError) => {
-        const fieldErrors = Object.values(error.constraints ?? {});
-
-        fieldErrors.forEach((errorMessage) => {
-          errors.push({ field: error.property, message: errorMessage });
-        });
-      });
-
+      extractErrors(exceptionResponse['message'] as ValidationError[]);
       response.status(status).json({
         success: false,
         statusCode: HttpStatus.BAD_REQUEST,

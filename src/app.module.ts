@@ -13,6 +13,7 @@ import { VersionModule } from './version/version.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { MessagesModule } from './messages/messages.module';
 import { LoggerModule } from './logger/logger.module';
+import { BookingsModule } from './bookings/bookings.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { LoggerModule } from './logger/logger.module';
     FirebaseModule,
     MessagesModule,
     LoggerModule,
+    BookingsModule,
   ],
 })
 export class AppModule {}
