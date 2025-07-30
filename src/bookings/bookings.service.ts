@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MongoServerError } from 'mongodb';
 
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -10,9 +10,14 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { Conversation } from '../messages/schemas/conversation.schema';
 import { Message } from '../messages/schemas/message.schema';
 import { Booking } from './schema/booking.schema';
-import { throwInternalServerError } from '../common/utils/error-utils';
+import {
+  throwInternalServerError,
+  throwNotFoundException,
+} from '../common/utils/error-utils';
 import { ErrorResponse } from '../common/dto/error-response.dto';
 import { SuccessResponse } from '../common/dto/success-response.dto';
+import { UpdateBookingSlotDto } from './dto/update-booking-slot.dto';
+import { BookingAction } from '../common/enum';
 
 const slots = [
   {
@@ -79,19 +84,191 @@ export class BookingsService {
     }
   }
 
-  findAll() {
-    return `This action returns all bookings`;
+  async update(updateBookingDto: UpdateBookingDto) {
+    const results: Booking[] = [];
+
+    for (const booking of updateBookingDto.bookings!) {
+      const updated = await this.bookingModel.findOneAndUpdate(
+        { date: booking.date },
+        { $set: booking },
+        { new: true },
+      );
+
+      if (updated) {
+        results.push(updated);
+      }
+    }
+
+    return new SuccessResponse(
+      {
+        bookings: results,
+      },
+      200,
+    );
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} booking`;
+  async getBookings() {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    const bookings = await this.bookingModel.find(
+      {
+        date: { $gte: currentDate },
+      },
+      { date: 1, is_open: 1 },
+    );
+
+    return new SuccessResponse(
+      {
+        bookings,
+      },
+      200,
+    );
   }
 
-  update(id: number, updateBookingDto: UpdateBookingDto) {
-    return `This action updates a #${id} booking`;
+  async getUserBooking(customerId: string) {
+    const booking = await this.bookingModel.findOne(
+      {
+        'slots.customer_id': new Types.ObjectId(customerId),
+      },
+      { date: 1, 'slots.$': 1 },
+    );
+    if (!booking) {
+      return throwNotFoundException(
+        '_id',
+        'No booking exists for this customer',
+      );
+    }
+    return new SuccessResponse(
+      {
+        booking,
+      },
+      200,
+    );
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} booking`;
+  async findDate(date: string) {
+    const booking = await this.bookingModel.findOne({ date: date });
+
+    if (!booking) {
+      return throwNotFoundException('date', 'Booking date does not exist');
+    }
+
+    return new SuccessResponse(
+      {
+        booking,
+      },
+      200,
+    );
+  }
+
+  async updateSlot(
+    date: string,
+    updateBookingSlotDto: UpdateBookingSlotDto,
+    customerId: string,
+  ) {
+    const { slot_id, action } = updateBookingSlotDto;
+    const customerObjectId = new Types.ObjectId(customerId);
+
+    const bookingSlot = await this.bookingModel.findOne(
+      { date: date, 'slots._id': slot_id },
+      { 'slots.$': 1 },
+    );
+
+    if (!bookingSlot) {
+      return throwNotFoundException('slot_id', 'Booking slot does not exist');
+    }
+
+    if (action === BookingAction.BOOKED) {
+      if (bookingSlot.slots[0].is_booked) {
+        throw new BadRequestException(
+          new ErrorResponse(400, [
+            {
+              field: 'slot_id',
+              message: `This ${bookingSlot.slots[0].start_time} - ${bookingSlot.slots[0].end_time} slot is already booked`,
+            },
+          ]),
+        );
+      }
+
+      const booking = await this.bookingModel.findOne({
+        date: date,
+        'slots._id': slot_id,
+      });
+
+      if (booking) {
+        const userCurrentBookedSlot = booking.slots.find(
+          (slot) =>
+            slot.customer_id !== null &&
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            slot.customer_id.toString() === customerObjectId.toString(),
+        );
+
+        if (userCurrentBookedSlot) {
+          throw new BadRequestException(
+            new ErrorResponse(400, [
+              {
+                field: 'slot_id',
+                message: `You already have a booking for this date: ${date}, ${userCurrentBookedSlot.start_time} - ${userCurrentBookedSlot.end_time}`,
+              },
+            ]),
+          );
+        } else {
+          await this.bookingModel.findOneAndUpdate(
+            { date: date, 'slots._id': slot_id },
+            {
+              $set: {
+                'slots.$.is_booked': true,
+                'slots.$.customer_id': customerObjectId,
+              },
+            },
+            { new: true },
+          );
+
+          return new SuccessResponse(
+            {
+              date: date,
+              time: `${bookingSlot.slots[0].start_time} - ${bookingSlot.slots[0].end_time}`,
+              slot_id: slot_id,
+            },
+            200,
+          );
+        }
+      }
+    } else {
+      const result = await this.bookingModel.findOneAndUpdate(
+        {
+          date: date,
+          'slots._id': slot_id,
+          'slots.customer_id': customerObjectId,
+        },
+        {
+          $set: {
+            'slots.$.is_booked': false,
+            'slots.$.customer_id': null,
+          },
+        },
+        { new: true },
+      );
+
+      if (!result) {
+        throw new BadRequestException(
+          new ErrorResponse(400, [
+            {
+              field: 'slot_id',
+              message: `This ${bookingSlot.slots[0].start_time} - ${bookingSlot.slots[0].end_time} slot is not booked by you`,
+            },
+          ]),
+        );
+      }
+
+      return new SuccessResponse(
+        {
+          date: date,
+          time: `${bookingSlot.slots[0].start_time} - ${bookingSlot.slots[0].end_time}`,
+          slot_id: slot_id,
+        },
+        200,
+      );
+    }
   }
 }

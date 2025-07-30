@@ -2,18 +2,17 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
-  IsDateString,
   ArrayNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsValidDate } from '../../common/decorator/is-valid-date.decorator';
 
-class BookingDto {
-  @IsDateString(
-    {},
-    { message: 'Date must be a valid ISO date string (e.g. 2025-07-30).' },
-  )
+export class DateStringDto {
+  @IsValidDate('date')
   date: string;
+}
 
+export class BookingDto extends DateStringDto {
   @IsBoolean()
   is_open: boolean;
 }

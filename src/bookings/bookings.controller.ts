@@ -5,14 +5,18 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UsePipes,
   ValidationPipe,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreateBookingDto, DateStringDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
+import { UpdateBookingSlotDto } from './dto/update-booking-slot.dto';
+import { AuthGuard } from '../common/guards/auth.guard';
 
+@UseGuards(AuthGuard)
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
@@ -23,23 +27,42 @@ export class BookingsController {
     return this.bookingsService.create(createBookingDto);
   }
 
+  @Patch()
+  @UsePipes(new ValidationPipe({ transform: true }))
+  update(@Body() updateBookingDto: UpdateBookingDto) {
+    return this.bookingsService.update(updateBookingDto);
+  }
+
   @Get()
-  findAll() {
-    return this.bookingsService.findAll();
+  getBookings() {
+    return this.bookingsService.getBookings();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.bookingsService.findOne(+id);
+  @Get('user')
+  getUserBooking(@Request() req: any) {
+    return this.bookingsService.getUserBooking(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      req.user.user._id as string,
+    );
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBookingDto: UpdateBookingDto) {
-    return this.bookingsService.update(+id, updateBookingDto);
+  @Get(':date')
+  findDate(@Param() params: DateStringDto) {
+    return this.bookingsService.findDate(params.date);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.bookingsService.remove(+id);
+  @Patch(':date')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  updateSlot(
+    @Param() params: DateStringDto,
+    @Body() updateBookingSlotDto: UpdateBookingSlotDto,
+    @Request() req: any,
+  ) {
+    return this.bookingsService.updateSlot(
+      params.date,
+      updateBookingSlotDto,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      req.user.user._id as string,
+    );
   }
 }

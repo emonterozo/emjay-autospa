@@ -74,3 +74,8 @@ export enum ChatReference {
   EMJAY = 'emjay',
   CUSTOMER = 'customer',
 }
+
+export enum BookingAction {
+  BOOKED = 'BOOKED',
+  UNBOOKED = 'UNBOOKED',
+}
