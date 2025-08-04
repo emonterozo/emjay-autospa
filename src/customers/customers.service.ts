@@ -284,6 +284,10 @@ export class CustomersService {
         last_name: customer.last_name,
         gender: customer.gender,
         birth_date: customer.birth_date,
+        address: customer.address,
+        barangay: customer.barangay,
+        city: customer.city,
+        province: customer.province,
       };
 
       const { accessToken, refreshToken } = jwtSign(
@@ -618,6 +622,10 @@ export class CustomersService {
       {
         first_name: updateCustomerDto.first_name,
         last_name: updateCustomerDto.last_name,
+        address: updateCustomerDto.address ?? null,
+        barangay: updateCustomerDto.barangay ?? null,
+        city: updateCustomerDto.city ?? null,
+        province: updateCustomerDto.province ?? null,
       },
       { returnDocument: 'after' },
     );
@@ -630,6 +638,10 @@ export class CustomersService {
         _id: id,
         first_name: updateCustomer.first_name,
         last_name: updateCustomer.last_name,
+        address: updateCustomer.address,
+        barangay: updateCustomer.barangay,
+        city: updateCustomer.city,
+        province: updateCustomer.province,
       },
     });
   }
