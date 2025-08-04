@@ -496,7 +496,8 @@ export class BookingsService {
       return throwNotFoundException('slot_id', 'Booking slot does not exist');
 
     const customerId = bookingSlot.slots.find(
-      (slot) => slot._id?.toString() === slot_id.toString(),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      (slot: any) => slot._id?.toString() === slot_id.toString(),
     )?.customer_id;
 
     const customer = await this.customerModel.findById(customerId);
