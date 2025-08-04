@@ -7,9 +7,6 @@ export type BookingDocument = HydratedDocument<Booking>;
 
 @Schema()
 export class Slot {
-  @Prop()
-  _id?: Types.ObjectId;
-
   @Prop({ required: true })
   start_time: string;
 
