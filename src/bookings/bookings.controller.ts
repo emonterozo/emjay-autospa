@@ -9,12 +9,15 @@ import {
   ValidationPipe,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, DateStringDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { UpdateBookingSlotDto } from './dto/update-booking-slot.dto';
 import { AuthGuard } from '../common/guards/auth.guard';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { UpdateScheduledBookingDto } from './dto/update-scheduled-booking.dto';
 
 @UseGuards(AuthGuard)
 @Controller('bookings')
@@ -34,15 +37,28 @@ export class BookingsController {
   }
 
   @Get()
-  getBookings() {
-    return this.bookingsService.getBookings();
-  }
-
-  @Get('user')
-  getUserBooking(@Request() req: any) {
-    return this.bookingsService.getUserBooking(
+  getBookings(@Request() req: any) {
+    return this.bookingsService.getBookings(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       req.user.user._id as string,
+    );
+  }
+
+  @Get('/scheduled')
+  getScheduledServices(
+    @Query(new ValidationPipe({ transform: true }))
+    paginationDto: PaginationDto,
+  ) {
+    return this.bookingsService.getScheduledServices(paginationDto);
+  }
+
+  @Patch('/scheduled')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  updateScheduledBooking(
+    @Body() updateScheduledBookingDto: UpdateScheduledBookingDto,
+  ) {
+    return this.bookingsService.updateScheduledBooking(
+      updateScheduledBookingDto,
     );
   }
 

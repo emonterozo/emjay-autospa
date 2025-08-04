@@ -79,3 +79,8 @@ export enum BookingAction {
   BOOKED = 'BOOKED',
   UNBOOKED = 'UNBOOKED',
 }
+
+export enum BookingScheduledAction {
+  CANCEL = 'CANCEL',
+  COMPLETE = 'COMPLETE',
+}

@@ -8,17 +8,20 @@ export type BookingDocument = HydratedDocument<Booking>;
 
 @Schema()
 export class Slot {
+  @Prop()
+  _id?: Types.ObjectId;
+
   @Prop({ required: true })
   start_time: string;
 
   @Prop({ required: true })
   end_time: string;
 
-  @Prop({ required: true })
-  is_booked: boolean;
-
   @Prop({ type: Types.ObjectId, ref: 'Customer' })
   customer_id: Types.ObjectId | Customer;
+
+  @Prop({ required: true })
+  is_completed: boolean;
 }
 
 const SlotSchema = SchemaFactory.createForClass(Slot);
