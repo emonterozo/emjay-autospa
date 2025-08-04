@@ -1,6 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { addMonths } from 'date-fns';
 
 import { Customer } from '../../customers/schemas/customer.schema';
 
@@ -36,13 +35,6 @@ export class Booking {
 
   @Prop({ type: [SlotSchema], default: [] })
   slots: Slot[];
-
-  @Prop({
-    type: Date,
-    default: () => addMonths(new Date(), 2),
-    expires: 0,
-  })
-  expireAt: Date;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);
