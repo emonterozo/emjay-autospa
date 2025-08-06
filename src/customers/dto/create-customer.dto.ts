@@ -1,4 +1,10 @@
-import { IsEnum, IsOptional, IsString, Validate } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Validate,
+} from 'class-validator';
 
 import { IsValidPhoneNumber } from '../../common/validator/is-valid-phone-number.validator';
 import { IsValidDate } from '../../common/decorator/is-valid-date.decorator';
@@ -43,4 +49,12 @@ export class CreateCustomerDto {
 
   @IsOptional()
   address?: string;
+
+  @IsNumber()
+  @IsOptional()
+  latitude?: number;
+
+  @IsNumber()
+  @IsOptional()
+  longitude?: number;
 }

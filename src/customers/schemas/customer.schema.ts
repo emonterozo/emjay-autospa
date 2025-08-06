@@ -48,6 +48,15 @@ export class Customer {
   @Prop({ type: String })
   address?: string;
 
+  @Prop({ type: Number })
+  latitude?: number;
+
+  @Prop({ type: Number })
+  longitude?: number;
+
+  @Prop({ type: String })
+  distance?: string;
+
   @Prop({ required: true })
   registered_on: Date;
 
@@ -65,6 +74,9 @@ export class Customer {
 
   @Prop({ type: [WashServiceCountSchema], required: true })
   moto_wash_service_count: WashServiceCount[];
+
+  @Prop({ type: Date })
+  profile_updated_at?: Date;
 }
 
 export const CustomerSchema = SchemaFactory.createForClass(Customer);

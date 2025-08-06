@@ -10,6 +10,9 @@ import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
+import axios from 'axios';
+import { addDays, format, isAfter, subDays } from 'date-fns';
+
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { ObjectIdDto } from '../common/dto/object-id.dto';
@@ -67,6 +70,25 @@ export type DecodedToken = {
   };
   iat: number;
   exp: number;
+};
+
+type DistanceMatrixResponse = {
+  destination_addresses: string[];
+  origin_addresses: string[];
+  rows: {
+    elements: {
+      distance: {
+        text: string;
+        value: number;
+      };
+      duration: {
+        text: string;
+        value: number;
+      };
+      status: string;
+    }[];
+  }[];
+  status: string;
 };
 
 @Injectable()
@@ -288,6 +310,7 @@ export class CustomersService {
         barangay: customer.barangay,
         city: customer.city,
         province: customer.province,
+        distance: customer.distance,
       };
 
       const { accessToken, refreshToken } = jwtSign(
@@ -608,13 +631,80 @@ export class CustomersService {
         password: hashedPassword,
       });
 
+      if (!updateCustomer) return;
+
       return new SuccessResponse({
         user: {
           _id: id,
-          first_name: updateCustomer?.first_name,
-          last_name: updateCustomer?.last_name,
+          first_name: updateCustomer.first_name,
+          last_name: updateCustomer.last_name,
+          address: updateCustomer.address,
+          barangay: updateCustomer.barangay,
+          city: updateCustomer.city,
+          province: updateCustomer.province,
+          distance: updateCustomer.distance,
         },
       });
+    }
+
+    let distanceValue = '';
+
+    const customer = await this.customerModel.findById(id);
+
+    const fiveDaysAgo = subDays(new Date(), 5);
+
+    if (
+      customer?.profile_updated_at &&
+      isAfter(customer.profile_updated_at, fiveDaysAgo)
+    ) {
+      const fiveDays = addDays(customer.profile_updated_at, 5);
+      throw new BadRequestException(
+        new ErrorResponse(400, [
+          {
+            field: 'profile_updated_at',
+            message: `Profile updates will be available again on ${format(fiveDays, 'MMM dd, yyyy')}.`,
+          },
+        ]),
+      );
+    }
+
+    try {
+      const apiKey = this.configService.get<string>(
+        'GOOGLE_DISTANCE_MATRIX_API',
+      )!;
+      const latitude = this.configService.get<string>(
+        'EMJAY_STARTING_LATITUDE',
+      )!;
+      const longitude = this.configService.get<string>(
+        'EMJAY_STARTING_LONGITUDE',
+      )!;
+
+      const response = await axios.get<DistanceMatrixResponse>(
+        'https://maps.googleapis.com/maps/api/distancematrix/json',
+        {
+          params: {
+            origins: `${updateCustomerDto.latitude},${updateCustomerDto.longitude}`,
+            destinations: `${latitude},${longitude}`,
+            key: apiKey,
+          },
+        },
+      );
+
+      const data = response.data;
+
+      if (data.rows.length && data.rows[0].elements.length) {
+        const element = data.rows[0].elements[0];
+
+        if (element.status === 'OK') {
+          distanceValue = element.distance.text;
+        } else {
+          throwInternalServerError();
+        }
+      } else {
+        throwInternalServerError();
+      }
+    } catch {
+      throwInternalServerError();
     }
 
     const updateCustomer = await this.customerModel.findByIdAndUpdate(
@@ -626,6 +716,10 @@ export class CustomersService {
         barangay: updateCustomerDto.barangay ?? null,
         city: updateCustomerDto.city ?? null,
         province: updateCustomerDto.province ?? null,
+        latitude: updateCustomerDto.latitude,
+        longitude: updateCustomerDto.longitude,
+        distance: distanceValue,
+        profile_updated_at: new Date(),
       },
       { returnDocument: 'after' },
     );
@@ -642,6 +736,7 @@ export class CustomersService {
         barangay: updateCustomer.barangay,
         city: updateCustomer.city,
         province: updateCustomer.province,
+        distance: updateCustomer.distance,
       },
     });
   }

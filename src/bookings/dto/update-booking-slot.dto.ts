@@ -6,6 +6,9 @@ export class UpdateBookingSlotDto {
   @IsMongoId()
   slot_id: Types.ObjectId;
 
+  @IsMongoId()
+  service_id: Types.ObjectId;
+
   @IsEnum(BookingAction)
   action: BookingAction;
 }

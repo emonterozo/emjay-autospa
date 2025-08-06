@@ -12,6 +12,7 @@ import { Message, MessageSchema } from '../messages/schemas/message.schema';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { Booking, BookingSchema } from './schema/booking.schema';
 import { Account, AccountSchema } from '../accounts/schemas/account.schema';
+import { Service, ServiceSchema } from '../services/schemas/service.schema';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Account, AccountSchema } from '../accounts/schemas/account.schema';
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
       { name: Account.name, schema: AccountSchema },
+      { name: Service.name, schema: ServiceSchema },
     ]),
     FirebaseModule,
   ],

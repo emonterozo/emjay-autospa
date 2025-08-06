@@ -22,23 +22,30 @@ import { BookingAction, BookingScheduledAction } from '../common/enum';
 import { Account } from '../accounts/schemas/account.schema';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { UpdateScheduledBookingDto } from './dto/update-scheduled-booking.dto';
+import { Service } from '../services/schemas/service.schema';
 
 const slots = [
   {
     start_time: '8:00 AM',
     end_time: '11:00 AM',
+    distance: null,
+    service_id: null,
     customer_id: null,
     is_completed: false,
   },
   {
     start_time: '12:00 PM',
     end_time: '03:00 PM',
+    distance: null,
+    service_id: null,
     customer_id: null,
     is_completed: false,
   },
   {
     start_time: '04:00 PM',
     end_time: '07:00 PM',
+    distance: null,
+    service_id: null,
     customer_id: null,
     is_completed: false,
   },
@@ -57,6 +64,8 @@ export class BookingsService {
     private readonly messageModel: Model<Message>,
     @InjectModel(Account.name)
     private readonly accountModel: Model<Account>,
+    @InjectModel(Service.name)
+    private readonly serviceModel: Model<Service>,
     private readonly firebaseService: FirebaseService,
   ) {}
 
@@ -136,6 +145,39 @@ export class BookingsService {
       },
     );
 
+    const forAdminMessage = `Hello Emjay! Just sending you my location for my scheduled booking so you can find me easily: https://www.google.com/maps/search/?api=1&query=${customer.latitude},${customer.longitude}`;
+
+    await this.messageModel.create({
+      customer_id: customer._id,
+      message: forAdminMessage,
+      timestamp: new Date(),
+      from: 'customer',
+      is_read: false,
+    });
+
+    await this.conversationModel.findOneAndUpdate(
+      { customer_id: customer._id },
+      {
+        $set: {
+          last_message: {
+            message: forAdminMessage,
+            timestamp: new Date(),
+            from: 'customer',
+          },
+        },
+        $inc: {
+          emjay_unread_count: 1,
+        },
+        $setOnInsert: {
+          customer_id: customer._id,
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+      },
+    );
+
     await this.firebaseService.sendPushNotification({
       type: 'single',
       title: title,
@@ -161,6 +203,7 @@ export class BookingsService {
         ...booking,
         slots,
       }));
+      console.log(slots);
       const created = await this.bookingModel.insertMany(bookings);
 
       return new SuccessResponse(
@@ -219,6 +262,8 @@ export class BookingsService {
       { date: 1, is_open: 1 },
     );
 
+    let userData: unknown = undefined;
+
     const userBooking = await this.bookingModel.findOne(
       {
         slots: {
@@ -231,10 +276,29 @@ export class BookingsService {
       { date: 1, 'slots.$': 1 },
     );
 
+    if (userBooking) {
+      const service = await this.serviceModel.findById(
+        userBooking.slots[0].service_id,
+      );
+
+      const objectData = userBooking.toObject();
+
+      userData = {
+        ...objectData,
+        slots: [
+          {
+            ...objectData.slots[0],
+            service_title: service?.title,
+            service_image: service?.image,
+          },
+        ],
+      };
+    }
+
     return new SuccessResponse(
       {
         bookings,
-        user_booking: userBooking,
+        user_booking: userData,
       },
       200,
     );
@@ -260,10 +324,14 @@ export class BookingsService {
     updateBookingSlotDto: UpdateBookingSlotDto,
     customerId: string,
   ) {
-    const { slot_id, action } = updateBookingSlotDto;
+    const { slot_id, service_id, action } = updateBookingSlotDto;
 
     const customerObjectId = new ObjectId(customerId);
     const currentDate = new Date();
+
+    const customer = await this.customerModel.findById(customerObjectId);
+
+    if (!customer) return;
 
     if (
       isBefore(new Date(date), currentDate) &&
@@ -339,7 +407,9 @@ export class BookingsService {
             { date: date, 'slots._id': new ObjectId(slot_id) },
             {
               $set: {
+                'slots.$.service_id': new ObjectId(service_id),
                 'slots.$.customer_id': customerObjectId,
+                'slots.$.distance': customer.distance,
               },
             },
             { new: true },
@@ -371,7 +441,9 @@ export class BookingsService {
         },
         {
           $set: {
+            'slots.$.distance': null,
             'slots.$.customer_id': null,
+            'slots.$.service_id': null,
           },
         },
         { new: true },
@@ -429,6 +501,15 @@ export class BookingsService {
         },
         { $unwind: '$customer' },
         {
+          $lookup: {
+            from: 'services',
+            localField: 'slots.service_id',
+            foreignField: '_id',
+            as: 'service',
+          },
+        },
+        { $unwind: '$service' },
+        {
           $project: {
             _id: 1,
             date: 1,
@@ -441,6 +522,12 @@ export class BookingsService {
               first_name: '$customer.first_name',
               last_name: '$customer.last_name',
               gender: '$customer.gender',
+              distance: '$customer.distance',
+            },
+            service: {
+              _id: '$service._id',
+              title: '$service.title',
+              type: '$service.type',
             },
           },
         },
@@ -483,6 +570,8 @@ export class BookingsService {
 
     if (action === BookingScheduledAction.CANCEL) {
       updateFields['slots.$.customer_id'] = null;
+      updateFields['slots.$.service_id'] = null;
+      updateFields['slots.$.distance'] = null;
     } else {
       updateFields['slots.$.is_completed'] = true;
     }
@@ -495,14 +584,16 @@ export class BookingsService {
     if (!bookingSlot)
       return throwNotFoundException('slot_id', 'Booking slot does not exist');
 
-    const customerId = bookingSlot.slots.find(
+    const selectedSlot = bookingSlot.slots.find(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       (slot: any) => slot._id?.toString() === slot_id.toString(),
-    )?.customer_id;
+    );
+
+    const customerId = selectedSlot?.customer_id;
 
     const customer = await this.customerModel.findById(customerId);
 
-    const slot = `${bookingSlot.slots[0].start_time} - ${bookingSlot.slots[0].end_time}`;
+    const slot = `${selectedSlot?.start_time} - ${selectedSlot?.end_time}`;
     const formattedDate = format(new Date(date), 'MMMM dd, yyyy');
 
     const message =
