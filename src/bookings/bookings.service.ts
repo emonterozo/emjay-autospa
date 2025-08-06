@@ -145,38 +145,40 @@ export class BookingsService {
       },
     );
 
-    const forAdminMessage = `Hello Emjay! Just sending you my location for my scheduled booking so you can find me easily: https://www.google.com/maps/search/?api=1&query=${customer.latitude},${customer.longitude}`;
+    if (action === BookingAction.BOOKED) {
+      const forAdminMessage = `Hello Emjay! Just sending you my location for my scheduled booking so you can find me easily: https://www.google.com/maps/search/?api=1&query=${customer.latitude},${customer.longitude}`;
 
-    await this.messageModel.create({
-      customer_id: customer._id,
-      message: forAdminMessage,
-      timestamp: new Date(),
-      from: 'customer',
-      is_read: false,
-    });
+      await this.messageModel.create({
+        customer_id: customer._id,
+        message: forAdminMessage,
+        timestamp: new Date(),
+        from: 'customer',
+        is_read: false,
+      });
 
-    await this.conversationModel.findOneAndUpdate(
-      { customer_id: customer._id },
-      {
-        $set: {
-          last_message: {
-            message: forAdminMessage,
-            timestamp: new Date(),
-            from: 'customer',
+      await this.conversationModel.findOneAndUpdate(
+        { customer_id: customer._id },
+        {
+          $set: {
+            last_message: {
+              message: forAdminMessage,
+              timestamp: new Date(),
+              from: 'customer',
+            },
+          },
+          $inc: {
+            emjay_unread_count: 1,
+          },
+          $setOnInsert: {
+            customer_id: customer._id,
           },
         },
-        $inc: {
-          emjay_unread_count: 1,
+        {
+          new: true,
+          upsert: true,
         },
-        $setOnInsert: {
-          customer_id: customer._id,
-        },
-      },
-      {
-        new: true,
-        upsert: true,
-      },
-    );
+      );
+    }
 
     await this.firebaseService.sendPushNotification({
       type: 'single',
